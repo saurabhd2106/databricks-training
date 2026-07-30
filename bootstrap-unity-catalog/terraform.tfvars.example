@@ -1,0 +1,30 @@
+# Copy to terraform.tfvars and edit. Do not commit terraform.tfvars.
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# ONE-TIME bootstrap for the shared Unity Catalog metastore (one per region per account).
+#
+# REQUIRES Databricks ACCOUNT ADMIN access (Account Console), not just workspace admin.
+# Get databricks_account_id from: Account Console → Account settings → Account ID.
+
+subscription_id       = "00000000-0000-0000-0000-000000000000"
+databricks_account_id = "00000000-0000-0000-0000-000000000000"
+# az account show --query tenantId -o tsv
+azure_tenant_id       = "00000000-0000-0000-0000-000000000000"
+prefix                = "dbx-uc"
+location              = "eastus"
+environment           = "dev"
+owner                 = "<yourname>"
+
+# Storage account names are globally unique in Azure. Override if the
+# derived "<prefix>metastore" name is already taken (409 StorageAccountAlreadyTaken).
+# storage_account_name = "dbxucfc9c48d2meta"
+
+# If apply fails with "reached the limit for metastores in region", list existing IDs
+# and set this instead of creating a new metastore:
+#   curl -H "Authorization: Bearer $(az account get-access-token --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d -o tsv --query accessToken)" \
+#     "https://accounts.azuredatabricks.net/api/2.0/accounts/<ACCOUNT_ID>/metastores"
+# existing_metastore_id = "00000000-0000-0000-0000-000000000000"
+
+# tags = {
+#   Team = "data-platform"
+# }
