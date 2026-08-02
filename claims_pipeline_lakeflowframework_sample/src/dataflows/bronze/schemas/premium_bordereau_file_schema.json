@@ -1,0 +1,16 @@
+{
+  "type": "struct",
+  "fields": [
+    {"name": "policy_id", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "insurer_name", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "postcode", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "region_name", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "wind_risk_band", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "building_type", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "sum_insured", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "mitigation_flag", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "annual_premium", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "policy_start_date", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "policy_end_date", "type": "string", "nullable": true, "metadata": {}}
+  ]
+}

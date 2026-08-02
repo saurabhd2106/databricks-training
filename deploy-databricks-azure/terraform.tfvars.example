@@ -18,9 +18,11 @@ azure_tenant_id       = "00000000-0000-0000-0000-000000000000"
 metastore_id          = "<metastore_id from bootstrap-unity-catalog output>"
 
 # Exactly ONE participant should set this to true to create the shared actuarial
-# catalog (bronze/silver/gold) and grants. Everyone else leaves it false.
-# When true, also set uc_storage_root + uc_access_connector_id from bootstrap outputs
-# (required because the auto-created Azure metastore has no metastore-level storage).
+# catalog (bronze/silver/gold), sandbox external location, and grants. Everyone else
+# leaves it false. When true, also set uc_storage_root + uc_access_connector_id from
+# bootstrap outputs (required because the auto-created Azure metastore has no
+# metastore-level storage). After apply, share terraform output
+# sandbox_external_location_path with learners for MANAGED LOCATION / external tables.
 create_actuarial_catalog = false
 # uc_storage_root         = "abfss://metastore@<storageaccount>.dfs.core.windows.net/"
 # uc_access_connector_id  = "/subscriptions/.../accessConnectors/..."

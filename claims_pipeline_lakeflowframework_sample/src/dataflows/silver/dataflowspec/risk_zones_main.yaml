@@ -1,0 +1,36 @@
+# Silver: deduped risk zones (SCD1 on postcode)
+dataFlowId: risk_zones
+dataFlowGroup: claims_silver
+dataFlowType: standard
+
+sourceSystem: claims_bronze
+sourceType: delta
+sourceViewName: v_risk_zone_lookup
+sourceDetails:
+  database: '{bronze_schema}'
+  table: risk_zone_lookup
+  cdfEnabled: true
+  selectExp:
+    - cast(postcode as string) as postcode
+    - cast(region_name as string) as region_name
+    - cast(wind_risk_band as string) as wind_risk_band
+    - _ingest_ts
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{silver_schema}'
+  table: risk_zones
+  comment: Deduped risk zone lookup (one row per postcode).
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: risk_zones_schema.json
+
+cdcSettings:
+  keys:
+    - postcode
+  sequence_by: _ingest_ts
+  scd_type: '1'
+  ignore_null_updates: false
+  except_column_list:
+    - _ingest_ts

@@ -1,0 +1,33 @@
+# The main pipeline for claim_pipeline_sample
+#
+# Lakeflow pipelines cannot attach to an all-purpose existing_cluster_id; they
+# provision their own DLT compute. Use the same single-node SKU as the Terraform
+# cluster to avoid Azure QuotaExceeded on the default Standard_F8s.
+
+resources:
+  pipelines:
+    claim_pipeline_sample_etl:
+      name: claim_pipeline_sample_etl
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      root_path: "../src/claim_pipeline_sample_etl"
+
+      clusters:
+        - label: default
+          node_type_id: ${var.node_type_id}
+          num_workers: 0
+          spark_conf:
+            spark.databricks.cluster.profile: singleNode
+            spark.master: local[*, 4]
+          custom_tags:
+            ResourceClass: SingleNode
+
+      libraries:
+        - glob:
+            include: ../src/claim_pipeline_sample_etl/transformations/**
+
+      environment:
+        dependencies:
+          # We include every dependency defined by pyproject.toml by defining an editable environment
+          # that points to the folder where pyproject.toml is deployed.
+          - --editable ${workspace.file_path}

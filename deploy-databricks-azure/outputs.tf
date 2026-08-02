@@ -32,3 +32,13 @@ output "cluster_policy_id" {
   description = "ID of the Databricks cluster policy."
   value       = databricks_cluster_policy.this.id
 }
+
+output "sandbox_external_location_name" {
+  description = "Name of the training sandbox external location (set when create_actuarial_catalog is true). Learners use this for ad hoc catalogs and external tables."
+  value       = var.create_actuarial_catalog ? databricks_external_location.sandbox[0].name : null
+}
+
+output "sandbox_external_location_path" {
+  description = "abfss base path of the training sandbox external location. Learners append /<username>/... at runtime."
+  value       = var.create_actuarial_catalog ? local.sandbox_storage_root : null
+}

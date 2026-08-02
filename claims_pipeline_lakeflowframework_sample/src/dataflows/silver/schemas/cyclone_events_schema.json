@@ -1,0 +1,10 @@
+{
+  "type": "struct",
+  "fields": [
+    {"name": "event_id", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "event_name", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "start_date", "type": "date", "nullable": true, "metadata": {}},
+    {"name": "end_date", "type": "date", "nullable": true, "metadata": {}},
+    {"name": "_ingest_ts", "type": "timestamp", "nullable": true, "metadata": {}}
+  ]
+}

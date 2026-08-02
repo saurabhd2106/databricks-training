@@ -1,0 +1,39 @@
+# Bronze: Auto Loader ingest of premium bordereau CSVs
+dataFlowId: premium_bordereau
+dataFlowGroup: claims_bronze
+dataFlowType: standard
+
+sourceSystem: claims_landing
+sourceType: cloudFiles
+sourceViewName: v_premium_bordereau_files
+sourceDetails:
+  path: '{sample_file_location}/premiums/'
+  readerOptions:
+    cloudFiles.format: csv
+    header: 'true'
+    cloudFiles.inferColumnTypes: 'false'
+  schemaPath: premium_bordereau_file_schema.json
+  selectExp:
+    - policy_id
+    - insurer_name
+    - postcode
+    - region_name
+    - wind_risk_band
+    - building_type
+    - sum_insured
+    - mitigation_flag
+    - annual_premium
+    - policy_start_date
+    - policy_end_date
+    - current_timestamp() AS _ingest_ts
+    - _metadata.file_path AS _source_file
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{bronze_schema}'
+  table: premium_bordereau
+  comment: Raw premium / policy bordereau CSV ingest.
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: premium_bordereau_schema.json

@@ -1,0 +1,5 @@
+tokens:
+  bronze_schema: actuarial_lff.bronze{logical_env}
+  silver_schema: actuarial_lff.silver{logical_env}
+  gold_schema: actuarial_lff.gold{logical_env}
+  sample_file_location: /Volumes/actuarial_lff/bronze{logical_env}/landing

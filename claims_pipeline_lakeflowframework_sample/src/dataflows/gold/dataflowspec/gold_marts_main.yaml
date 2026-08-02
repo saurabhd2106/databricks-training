@@ -1,0 +1,21 @@
+# Gold: actuarial marts (event losses, policy loss ratio, risk-band performance)
+dataFlowId: gold_marts
+dataFlowGroup: claims_gold
+dataFlowType: materialized_view
+
+materializedViews:
+  event_loss_summary:
+    sqlPath: ./event_loss_summary.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Claim counts and loss totals by cyclone event.
+  policy_loss_ratio:
+    sqlPath: ./policy_loss_ratio.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Premium vs incurred loss ratio by insurer, wind risk band, and building type.
+  risk_band_performance:
+    sqlPath: ./risk_band_performance.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Loss ratio and claim frequency by wind risk band and region.

@@ -1,0 +1,8 @@
+expect_or_drop:
+  - name: incurred_gte_paid
+    constraint: incurred_amount >= paid_to_date
+    tag: Validity
+expect:
+  - name: reported_on_or_after_loss
+    constraint: reported_date >= date_of_loss
+    tag: Validity

@@ -1,0 +1,16 @@
+# Local Terraform artifacts and personal config
+.terraform/
+.terraform.lock.hcl.bak
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Personal variable files (keep *.example)
+*.tfvars
+!*.tfvars.example
+*.tfvars.json

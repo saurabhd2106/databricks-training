@@ -1,0 +1,37 @@
+# Silver: typed cyclone events (SCD1 on event_id)
+dataFlowId: silver_cyclone_events
+dataFlowGroup: claims_silver
+dataFlowType: standard
+
+sourceSystem: claims_bronze
+sourceType: delta
+sourceViewName: v_cyclone_events
+sourceDetails:
+  database: '{bronze_schema}'
+  table: cyclone_events
+  cdfEnabled: true
+  selectExp:
+    - cast(event_id as string) as event_id
+    - cast(event_name as string) as event_name
+    - to_date(start_date) as start_date
+    - to_date(end_date) as end_date
+    - _ingest_ts
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{silver_schema}'
+  table: cyclone_events
+  comment: Typed cyclone event windows.
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: cyclone_events_schema.json
+
+cdcSettings:
+  keys:
+    - event_id
+  sequence_by: _ingest_ts
+  scd_type: '1'
+  ignore_null_updates: false
+  except_column_list:
+    - _ingest_ts

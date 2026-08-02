@@ -1,0 +1,45 @@
+# Silver: typed policies (SCD1 on policy_id)
+dataFlowId: policies
+dataFlowGroup: claims_silver
+dataFlowType: standard
+
+sourceSystem: claims_bronze
+sourceType: delta
+sourceViewName: v_premium_bordereau
+sourceDetails:
+  database: '{bronze_schema}'
+  table: premium_bordereau
+  cdfEnabled: true
+  selectExp:
+    - cast(policy_id as string) as policy_id
+    - cast(insurer_name as string) as insurer_name
+    - cast(postcode as string) as postcode
+    - cast(region_name as string) as region_name
+    - cast(wind_risk_band as string) as wind_risk_band
+    - cast(building_type as string) as building_type
+    - cast(sum_insured as decimal(18,2)) as sum_insured
+    - cast(mitigation_flag as string) as mitigation_flag
+    - cast(annual_premium as decimal(18,2)) as annual_premium
+    - to_date(policy_start_date) as policy_start_date
+    - to_date(policy_end_date) as policy_end_date
+    - (to_date(policy_end_date) is null or to_date(policy_end_date) >= current_date()) as is_active
+    - _ingest_ts
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{silver_schema}'
+  table: policies
+  comment: Typed premium / policy bordereau.
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: policies_schema.json
+
+cdcSettings:
+  keys:
+    - policy_id
+  sequence_by: _ingest_ts
+  scd_type: '1'
+  ignore_null_updates: false
+  except_column_list:
+    - _ingest_ts

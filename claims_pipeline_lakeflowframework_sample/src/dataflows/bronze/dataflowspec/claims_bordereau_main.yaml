@@ -1,0 +1,38 @@
+# Bronze: Auto Loader ingest of claims bordereau CSVs
+dataFlowId: claims_bordereau
+dataFlowGroup: claims_bronze
+dataFlowType: standard
+
+sourceSystem: claims_landing
+sourceType: cloudFiles
+sourceViewName: v_claims_bordereau_files
+sourceDetails:
+  path: '{sample_file_location}/claims/'
+  readerOptions:
+    cloudFiles.format: csv
+    header: 'true'
+    cloudFiles.inferColumnTypes: 'false'
+  schemaPath: claims_bordereau_file_schema.json
+  selectExp:
+    - claim_id
+    - policy_id
+    - event_id
+    - date_of_loss
+    - reported_date
+    - peril_type
+    - claim_status
+    - incurred_amount
+    - paid_to_date
+    - snapshot_date
+    - current_timestamp() AS _ingest_ts
+    - _metadata.file_path AS _source_file
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{bronze_schema}'
+  table: claims_bordereau
+  comment: Raw claims bordereau CSV ingest (SCD-style snapshots).
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: claims_bordereau_schema.json

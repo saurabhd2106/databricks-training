@@ -1,0 +1,32 @@
+# Bronze: Auto Loader ingest of cyclone events CSVs
+dataFlowId: cyclone_events
+dataFlowGroup: claims_bronze
+dataFlowType: standard
+
+sourceSystem: claims_landing
+sourceType: cloudFiles
+sourceViewName: v_cyclone_events_files
+sourceDetails:
+  path: '{sample_file_location}/cyclone_events/'
+  readerOptions:
+    cloudFiles.format: csv
+    header: 'true'
+    cloudFiles.inferColumnTypes: 'false'
+  schemaPath: cyclone_events_file_schema.json
+  selectExp:
+    - event_id
+    - event_name
+    - start_date
+    - end_date
+    - current_timestamp() AS _ingest_ts
+    - _metadata.file_path AS _source_file
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{bronze_schema}'
+  table: cyclone_events
+  comment: Raw cyclone events CSV ingest.
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: cyclone_events_schema.json

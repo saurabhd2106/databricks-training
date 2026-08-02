@@ -1,0 +1,10 @@
+# UC Volume for landing sample CSVs before bronze ingest.
+
+resources:
+  volumes:
+    actuarial_bronze_landing:
+      catalog_name: ${var.catalog}
+      schema_name: bronze
+      name: landing
+      volume_type: MANAGED
+      comment: Landing zone for claims sample CSVs (bronze ingest).

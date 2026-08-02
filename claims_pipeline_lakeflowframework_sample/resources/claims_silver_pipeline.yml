@@ -1,0 +1,20 @@
+resources:
+  pipelines:
+    claims_silver_pipeline:
+      name: claims_lff_silver
+      channel: CURRENT
+      serverless: true
+      catalog: ${var.catalog}
+      schema: ${var.silver_schema}
+      libraries:
+        - notebook:
+            path: ${var.framework_source_path}/dlt_pipeline
+      configuration:
+        bundle.sourcePath: ${workspace.file_path}/src
+        bundle.target: ${bundle.target}
+        framework.sourcePath: ${var.framework_source_path}
+        workspace.host: ${var.workspace_host}
+        pipeline.layer: silver
+        logicalEnv: ${var.logical_env}
+        pipeline.dataFlowGroupFilter: claims_silver
+      root_path: ${workspace.file_path}/src

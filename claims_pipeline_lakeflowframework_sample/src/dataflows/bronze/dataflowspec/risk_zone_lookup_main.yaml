@@ -1,0 +1,31 @@
+# Bronze: Auto Loader ingest of risk zone lookup CSVs
+dataFlowId: risk_zone_lookup
+dataFlowGroup: claims_bronze
+dataFlowType: standard
+
+sourceSystem: claims_landing
+sourceType: cloudFiles
+sourceViewName: v_risk_zone_lookup_files
+sourceDetails:
+  path: '{sample_file_location}/risk_zones/'
+  readerOptions:
+    cloudFiles.format: csv
+    header: 'true'
+    cloudFiles.inferColumnTypes: 'false'
+  schemaPath: risk_zone_lookup_file_schema.json
+  selectExp:
+    - postcode
+    - region_name
+    - wind_risk_band
+    - current_timestamp() AS _ingest_ts
+    - _metadata.file_path AS _source_file
+mode: stream
+
+targetFormat: delta
+targetDetails:
+  database: '{bronze_schema}'
+  table: risk_zone_lookup
+  comment: Raw risk zone lookup CSV ingest.
+  tableProperties:
+    delta.enableChangeDataFeed: 'true'
+  schemaPath: risk_zone_lookup_schema.json

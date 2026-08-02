@@ -1,0 +1,24 @@
+# Lakeflow Declarative Pipeline: actuarial bronze → silver → gold
+#
+# Runs on serverless compute (avoids Azure VM quota / "Waiting for resources"
+# on classic DLT clusters). The land job task still uses existing_cluster_id.
+
+resources:
+  pipelines:
+    claims_pipeline_saurabh_etl:
+      name: claims_pipeline_saurabh_etl
+      catalog: ${var.catalog}
+      schema: bronze
+      serverless: true
+      root_path: "../src/claims_pipeline_saurabh_etl"
+
+      libraries:
+        - glob:
+            include: ../src/claims_pipeline_saurabh_etl/transformations/**
+
+      configuration:
+        landing_path: ${var.landing_volume_path}
+
+      environment:
+        dependencies:
+          - --editable ${workspace.file_path}

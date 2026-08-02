@@ -1,0 +1,11 @@
+# UC Volume for landing sample CSVs before bronze Auto Loader ingest.
+# Requires catalog actuarial_lff and schema bronze to exist before deploy.
+
+resources:
+  volumes:
+    actuarial_lff_bronze_landing:
+      catalog_name: ${var.catalog}
+      schema_name: bronze
+      name: landing
+      volume_type: MANAGED
+      comment: Landing zone for claims sample CSVs (Lakeflow Framework bronze ingest).

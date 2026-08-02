@@ -1,0 +1,8 @@
+{
+  "type": "struct",
+  "fields": [
+    {"name": "postcode", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "region_name", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "wind_risk_band", "type": "string", "nullable": true, "metadata": {}}
+  ]
+}

@@ -1,0 +1,91 @@
+# Copy to terraform.tfvars and edit. Do not commit terraform.tfvars.
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# Apply AFTER:
+#   1) bootstrap-unity-catalog
+#   2) deploy-databricks-azure with create_actuarial_catalog = true (sandbox location)
+
+databricks_account_id   = "00000000-0000-0000-0000-000000000000"
+azure_tenant_id         = "00000000-0000-0000-0000-000000000000"
+# Numeric workspace ID from deploy-databricks-azure:
+#   terraform -chdir=../deploy-databricks-azure state show azurerm_databricks_workspace.this
+#   (look for workspace_id = "...")
+# Or from the workspace URL: https://adb-<workspace_id>.azuredatabricks.net
+databricks_workspace_id = "1234567890123456"
+databricks_host         = "https://adb-1234567890123456.1.azuredatabricks.net"
+# From bootstrap-unity-catalog output storage_root
+uc_storage_root         = "abfss://metastore@<storageaccount>.dfs.core.windows.net/"
+
+# UPN = mail_nickname@entra_domain — must be a verified Entra domain in the tenant.
+# This training tenant only verifies saurabhuptut.onmicrosoft.com (not arpc.gov.au).
+entra_domain = "saurabhuptut.onmicrosoft.com"
+
+training_users = {
+  paridhi = {
+    mail_nickname        = "paridhi.mittal"
+    display_name         = "Paridhi Mittal"
+    create_entra_user    = true
+    workspace_permission = "USER"
+  }
+  stephen = {
+    mail_nickname        = "stephen.siswanto"
+    display_name         = "Stephen Siswanto"
+    create_entra_user    = true
+    workspace_permission = "USER"
+  }
+  ted = {
+    mail_nickname        = "ted.li"
+    display_name         = "Ted Li"
+    create_entra_user    = true
+    workspace_permission = "USER"
+  }
+  vincent = {
+    mail_nickname        = "vincent.he"
+    display_name         = "Vincent He"
+    create_entra_user    = true
+    workspace_permission = "USER"
+  }
+  hasith = {
+    mail_nickname        = "hasith.wijesekera"
+    display_name         = "Hasith Wijesekera"
+    create_entra_user    = true
+    workspace_permission = "USER"
+  }
+}
+
+# Optional shared groups — leave empty when each trainee has a personal catalog.
+training_groups = {}
+
+# One personal catalog per user; owner gets full catalog privileges (default_catalog_privileges).
+catalogs = {
+  actuarial_paridhi = {
+    comment         = "Personal actuarial catalog for Paridhi Mittal."
+    schemas         = ["bronze", "silver", "gold"]
+    grant_to_users  = ["paridhi"]
+    grant_to_groups = []
+  }
+  actuarial_stephen = {
+    comment         = "Personal actuarial catalog for Stephen Siswanto."
+    schemas         = ["bronze", "silver", "gold"]
+    grant_to_users  = ["stephen"]
+    grant_to_groups = []
+  }
+  actuarial_ted = {
+    comment         = "Personal actuarial catalog for Ted Li."
+    schemas         = ["bronze", "silver", "gold"]
+    grant_to_users  = ["ted"]
+    grant_to_groups = []
+  }
+  actuarial_vincent = {
+    comment         = "Personal actuarial catalog for Vincent He."
+    schemas         = ["bronze", "silver", "gold"]
+    grant_to_users  = ["vincent"]
+    grant_to_groups = []
+  }
+  actuarial_hasith = {
+    comment         = "Personal actuarial catalog for Hasith Wijesekera."
+    schemas         = ["bronze", "silver", "gold"]
+    grant_to_users  = ["hasith"]
+    grant_to_groups = []
+  }
+}

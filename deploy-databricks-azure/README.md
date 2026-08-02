@@ -7,7 +7,7 @@ Provisions a **Premium** Azure Databricks workspace with customer VNet injection
 | Layer | Provider | Resources |
 |-------|----------|-----------|
 | Azure plane | `hashicorp/azurerm` (~> 4.81) | Resource group, VNet, Databricks-delegated subnets, NSGs, Premium workspace |
-| Workspace plane | `databricks/databricks` (~> 1.122) | Cluster policy, all-purpose cluster, optional UC storage credential/external location + actuarial catalog/schemas/grants |
+| Workspace plane | `databricks/databricks` (~> 1.122) | Cluster policy, all-purpose cluster, optional UC storage credential + actuarial/sandbox external locations + actuarial catalog/schemas/grants |
 | Account plane | `databricks` alias `accounts` | Metastore assignment to the shared UC metastore |
 
 Unity Catalog **metastore** itself is created once by [`bootstrap-unity-catalog/`](../bootstrap-unity-catalog/) (Account Admin required). This module only assigns the workspace and optionally creates the shared `actuarial` catalog.
@@ -81,6 +81,8 @@ A short post-workspace wait is included so the first cluster create is less like
 | `databricks_host` | Workspace URL (`https://adb-....azuredatabricks.net`) |
 | `cluster_id` / `cluster_name` | Provisioned single-node all-purpose cluster |
 | `cluster_policy_id` | Enforced cluster policy |
+| `sandbox_external_location_name` | Training sandbox external location name (when `create_actuarial_catalog = true`) |
+| `sandbox_external_location_path` | abfss base path for ad hoc catalogs / external tables (`…/sandbox`) |
 
 Open the workspace URL in a browser (same Azure AD identity as `az login`) to use the cluster.
 
@@ -94,7 +96,7 @@ Open the workspace URL in a browser (same Azure AD identity as `az login`) to us
 - Auto-termination (default 30 minutes, max 60)
 - Default node type `Standard_E4ads_v7` (Databricks-supported). Avoid `Standard_E4ds_v7` (not supported). Flexible alternates disabled (`alternate_node_type_ids = []`) to prevent incompatible auto-fallbacks. Raise Total Regional / family quota before moving to multi-node
 - Cluster policy fixing UC shared mode (`USER_ISOLATION`) and idle timeout
-- Unity Catalog workspace assignment + optional shared `actuarial` catalog (bronze/silver/gold)
+- Unity Catalog workspace assignment + optional shared `actuarial` catalog (bronze/silver/gold) and `sandbox-uc-location` for learner ad hoc catalogs / external tables (same bootstrap storage, `/sandbox` path). Catalog grants to `account users` include `CREATE_TABLE` and `CREATE_MATERIALIZED_VIEW` so serverless Lakeflow pipelines can publish medallion tables.
 - Consistent tags (`Environment`, `Project`, `ProvisionedBy`, optional `Owner`)
 - Avoid Databricks default/reserved cluster tag keys in `custom_tags` and policies (`Vendor`, `ClusterId`, `ClusterName`, `Creator`, `Name`, `RunName`, `JobId`, `ManagedBy`) — policy-enforced conflicts fail cluster create
 
@@ -107,6 +109,10 @@ terraform destroy
 Azure also creates a **managed resource group** (`<prefix>-dbx-managed-rg`). Terraform removes it with the workspace; do not delete that RG manually first.
 
 Do not destroy the shared metastore from `bootstrap-unity-catalog` until all workspaces are detached.
+
+## Training users, groups, and ad hoc catalogs
+
+Do **not** add trainees or extra catalogs in this stack. Use the sibling module [`manage-databricks-training/`](../manage-databricks-training/) after this workspace is applied with `create_actuarial_catalog = true` (sandbox external location). That stack creates Entra users/groups, assigns them to the workspace, and provisions on-demand catalogs/schemas under the sandbox storage path—without re-running VNet/workspace/cluster applies.
 
 ## Out of scope (optional next steps)
 

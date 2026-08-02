@@ -1,0 +1,11 @@
+# Silver: latest claim snapshot per claim_id
+dataFlowId: claims_current
+dataFlowGroup: claims_silver
+dataFlowType: materialized_view
+
+materializedViews:
+  claims_current:
+    sqlPath: ./claims_current.sql
+    tableDetails:
+      database: '{silver_schema}'
+      comment: Latest claim snapshot per claim_id.

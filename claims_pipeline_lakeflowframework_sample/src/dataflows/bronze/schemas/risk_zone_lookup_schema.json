@@ -1,0 +1,10 @@
+{
+  "type": "struct",
+  "fields": [
+    {"name": "postcode", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "region_name", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "wind_risk_band", "type": "string", "nullable": true, "metadata": {}},
+    {"name": "_ingest_ts", "type": "timestamp", "nullable": true, "metadata": {}},
+    {"name": "_source_file", "type": "string", "nullable": true, "metadata": {}}
+  ]
+}

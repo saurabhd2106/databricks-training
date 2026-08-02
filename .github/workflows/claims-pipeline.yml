@@ -1,0 +1,63 @@
+# Validate, deploy, and run the claims_pipeline_saurabh Databricks Asset Bundle.
+# See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
+
+name: Claims pipeline
+
+concurrency:
+  group: claims-pipeline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "claims_pipeline_saurabh/**"
+      - ".github/workflows/claims-pipeline.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "claims_pipeline_saurabh/**"
+      - ".github/workflows/claims-pipeline.yml"
+  workflow_dispatch:
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  validate:
+    name: Validate bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: claims_pipeline_saurabh
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Validate
+        run: databricks bundle validate --target prod
+
+  deploy_and_run:
+    name: Deploy and run
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: claims_pipeline_saurabh
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Deploy
+        run: databricks bundle deploy --target prod
+
+      - name: Run claims_pipeline_job
+        run: databricks bundle run claims_pipeline_job --target prod
