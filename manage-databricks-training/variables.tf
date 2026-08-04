@@ -18,6 +18,11 @@ variable "databricks_host" {
   description = "HTTPS host URL for the Databricks workspace (deploy-databricks-azure output databricks_host)."
 }
 
+variable "cluster_id" {
+  type        = string
+  description = "All-purpose cluster ID from deploy-databricks-azure output cluster_id."
+}
+
 variable "uc_storage_root" {
   type        = string
   description = "abfss URI from bootstrap-unity-catalog storage_root. New catalogs use {uc_storage_root}/sandbox/{catalog_name}."

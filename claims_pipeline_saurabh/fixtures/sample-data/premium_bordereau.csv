@@ -4992,10 +4992,13 @@ POL-004990,Coral Coast Mutual,4350,Toowoomba QLD,B-F,Home,609482,Elevated Slab,8
 POL-004991,Pacific Rim Insurance,4737,Bowen QLD,Q-S,Home,378106,None,2273.43,2024-12-26,2025-12-26
 POL-004992,Coral Coast Mutual,4703,Rockhampton QLD,Q-S,Home,872387,None,6218.79,2023-03-05,2024-03-04
 POL-004993,Northbeam General,4703,Rockhampton QLD,Q-S,Home,678023,None,4495.71,2023-08-02,2024-08-01
-POL-004994,Coral Coast Mutual,0810,Darwin NT,T-W,Home,520398,Shutters Installed,3890.85,2024-06-29,2025-06-29
-POL-004995,Northbeam General,4655,Hervey Bay QLD,L-P,Home,794877,None,3158.79,2023-05-24,2024-05-23
-POL-004996,Northbeam General,0850,Alice Springs NT,B-F,SME,2831564,Roof Tie-Down,4079.2,2023-02-06,2024-02-06
-POL-004997,Pacific Rim Insurance,4350,Toowoomba QLD,B-F,SME,623164,None,1011.07,2024-12-10,2025-12-10
-POL-004998,Southern Cross Insurance,6721,Port Hedland WA,T-W,Home,285682,Shutters Installed,2170.51,2024-04-01,2025-04-01
-POL-004999,Pacific Rim Insurance,6000,Perth WA,B-F,Home,456205,Shutters Installed,723.51,2024-10-09,2025-10-09
-POL-005000,Southern Cross Insurance,4720,Charters Towers QLD,L-P,Home,667987,Shutters Installed,2448.92,2025-09-18,2026-09-18
+POL-004994,Coral Coast Mutual,9999,Unknown Region,T-W,Home,520398,Shutters Installed,3890.85,2024-06-29,2025-06-29
+POL-004995,Northbeam General,4655,Hervey Bay QLD,L-P,Home,794877,None,795877.00,2023-05-24,2024-05-23
+POL-004996,Northbeam General,0850,Alice Springs NT,B-F,SME,2831564,Roof Tie-Down,4079.2,2023-02-06,2022-01-01
+POL-004997,Pacific Rim Insurance,4350,Toowoomba QLD,B-F,SME,623164,None,"1,234.56",2024-12-10,2025-12-10
+POL-004998,Southern Cross Insurance,6721,Port Hedland WA,T-W,Home,abc,Shutters Installed,2170.51,2024-04-01,2025-04-01
+POL-004999,Pacific Rim Insurance,,Perth WA,B-F,Home,456205,Shutters Installed,723.51,2024-10-09,2025-10-09
+,Southern Cross Insurance,4720,Charters Towers QLD,L-P,Home,667987,Shutters Installed,2448.92,2025-09-18,2026-09-18
+POL-004991,Pacific Rim Insurance,4737,Bowen QLD,Q-S,Home,378106,None,2323.43,2024-12-26,2025-12-26
+POL-004990,Coral Coast Mutual,4350,Toowoomba QLD,B-F,Home,609482,Elevated Slab,916.60,2023-06-02,2024-06-01
+POL-004989,Outback Assurance Group,4740,Mackay QLD,Q-S,Strata,6327018,None,43442.13,2023-02-10,2024-02-10

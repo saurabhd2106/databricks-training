@@ -10,7 +10,7 @@ Use this after the workspace and shared UC foundation exist. It does **not** cre
 |-------|----------|-----------|
 | Entra ID | `hashicorp/azuread` | Users (optional create), security groups, membership |
 | Databricks account | `databricks` alias `accounts` | Account users/groups, workspace assignment (`USER` / `ADMIN`) |
-| Databricks workspace | `databricks` | Entitlements, catalogs, schemas, UC grants |
+| Databricks workspace | `databricks` | Entitlements, shared-cluster ACLs (`CAN_RESTART`), catalogs, schemas, UC grants |
 
 New catalogs use managed storage under the existing sandbox path:
 
@@ -46,6 +46,7 @@ Set at least:
 | `azure_tenant_id` | `az account show --query tenantId -o tsv` |
 | `databricks_workspace_id` | Numeric ID from deploy state (see below) |
 | `databricks_host` | `deploy-databricks-azure` output `databricks_host` |
+| `cluster_id` | `deploy-databricks-azure` output `cluster_id` (`terraform -chdir=../deploy-databricks-azure output -raw cluster_id`) |
 | `uc_storage_root` | `bootstrap-unity-catalog` output `storage_root` |
 | `entra_domain` | Your Entra primary domain (e.g. `contoso.onmicrosoft.com`) |
 | `training_users` | Map of trainees (UPN = `mail_nickname@entra_domain` unless `user_principal_name` is set) |
@@ -95,7 +96,7 @@ Unless overridden per catalog with `privileges`:
 - `CREATE_TABLE`, `CREATE_MATERIALIZED_VIEW`, `CREATE_VOLUME`
 - `SELECT`, `MODIFY`
 
-Cluster create entitlement defaults to **false** (use the shared cluster from deploy). The example tfvars gives each trainee a personal `actuarial_<firstname>` catalog with those privileges.
+Cluster create entitlement defaults to **false**. Apply grants **`CAN_RESTART`** on the shared all-purpose cluster (`cluster_id` from deploy) so trainees can attach to and start it. The example tfvars gives each trainee a personal `actuarial_<firstname>` catalog with those privileges.
 
 ## Destroy
 

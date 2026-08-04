@@ -19,3 +19,5 @@ postcode,region_name,wind_risk_band
 4825,Cloncurry QLD,B-F
 4802,Townsville QLD,T-W
 4810,Townsville QLD,T-W
+,Missing Postcode Zone,T-W
+4870,Cairns QLD CONFLICT,HIGH

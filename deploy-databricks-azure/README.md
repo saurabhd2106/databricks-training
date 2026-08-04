@@ -112,7 +112,7 @@ Do not destroy the shared metastore from `bootstrap-unity-catalog` until all wor
 
 ## Training users, groups, and ad hoc catalogs
 
-Do **not** add trainees or extra catalogs in this stack. Use the sibling module [`manage-databricks-training/`](../manage-databricks-training/) after this workspace is applied with `create_actuarial_catalog = true` (sandbox external location). That stack creates Entra users/groups, assigns them to the workspace, and provisions on-demand catalogs/schemas under the sandbox storage path—without re-running VNet/workspace/cluster applies.
+Do **not** add trainees or extra catalogs in this stack. Use the sibling module [`manage-databricks-training/`](../manage-databricks-training/) after this workspace is applied with `create_actuarial_catalog = true` (sandbox external location). That stack creates Entra users/groups, assigns them to the workspace, grants them **`CAN_RESTART`** on this stack's `cluster_id`, and provisions on-demand catalogs/schemas under the sandbox storage path—without re-running VNet/workspace/cluster applies.
 
 ## Out of scope (optional next steps)
 
