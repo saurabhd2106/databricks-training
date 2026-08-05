@@ -1,0 +1,7 @@
+policy_id,insurer_name,postcode,region_name,wind_risk_band,building_type,sum_insured,mitigation_flag,annual_premium,policy_start_date,policy_end_date
+POL-001,Pacific Rim Insurance,4870,Cairns QLD,T-W,Home,500000.00,Shutters Installed,2500.00,2024-01-01,2025-01-01
+POL-002,Pacific Rim Insurance,0800,Darwin NT,T-W,Home,400000.00,Roof Tie-Down,2000.00,2024-06-01,2025-06-01
+POL-003,Northern Cover,9999,Unknown Region,B-F,Home,300000.00,None,1500.00,2024-01-01,2025-01-01
+POL-BAD-DATES,Pacific Rim Insurance,4870,Cairns QLD,T-W,Home,100000.00,None,500.00,2025-01-01,2024-01-01
+POL-BAD-SI,Pacific Rim Insurance,4870,Cairns QLD,T-W,Home,0.00,None,500.00,2024-01-01,2025-01-01
+POL-BAD-PREM,Pacific Rim Insurance,4870,Cairns QLD,T-W,Home,100000.00,None,-10.00,2024-01-01,2025-01-01

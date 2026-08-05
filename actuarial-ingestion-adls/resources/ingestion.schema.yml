@@ -1,0 +1,8 @@
+# Unity Catalog schema for batch Auto Loader bronze tables.
+
+resources:
+  schemas:
+    actuarial_ingestion:
+      catalog_name: ${var.catalog}
+      name: ingestion
+      comment: Actuarial batch Auto Loader bronze ingest from ADLS (abfss).

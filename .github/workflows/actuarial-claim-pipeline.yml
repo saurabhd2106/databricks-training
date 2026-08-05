@@ -1,0 +1,93 @@
+# Test, validate, deploy, and run the actuarial_claim_pipeline Databricks Asset Bundle.
+# Trigger manually via Actions → "Actuarial claim pipeline" → Run workflow.
+# Requires repo secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
+# See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
+
+name: Actuarial claim pipeline
+
+concurrency:
+  group: actuarial-claim-pipeline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial_claim_pipeline
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run unit and transform tests
+        run: uv run pytest tests/ --ignore=tests/test_smoke_integration.py
+
+  validate:
+    name: Validate bundle
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial_claim_pipeline
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Validate
+        run: databricks bundle validate --target prod
+
+  deploy_and_run:
+    name: Deploy and run
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial_claim_pipeline
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Deploy
+        run: databricks bundle deploy --target prod
+
+      - name: Run actuarial_claims_job
+        run: databricks bundle run actuarial_claims_job --target prod
+
+  smoke:
+    name: Smoke tests
+    needs: deploy_and_run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial_claim_pipeline
+    env:
+      ACTUARIAL_TEST_CATALOG: actuarial
+      ACTUARIAL_TEST_SCHEMA: prod
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run post-deploy smoke tests
+        run: uv run pytest tests/test_smoke_integration.py

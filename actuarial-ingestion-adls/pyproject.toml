@@ -1,0 +1,30 @@
+[project]
+name = "actuarial_ingestion_adls"
+version = "0.0.1"
+authors = [{ name = "databricks-np@saurabhuptut.onmicrosoft.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # Job dependencies go here; see https://docs.databricks.com/dev-tools/bundles/library-dependencies
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "databricks-connect>=15.4,<15.5",
+    "ipykernel",
+    "pyyaml",
+]
+
+[project.scripts]
+main = "actuarial_ingestion_adls.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/actuarial_ingestion_adls"]
+
+[tool.ruff]
+line-length = 120

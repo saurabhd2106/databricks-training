@@ -10,7 +10,7 @@ Use this after the workspace and shared UC foundation exist. It does **not** cre
 |-------|----------|-----------|
 | Entra ID | `hashicorp/azuread` | Users (optional create), security groups, membership |
 | Databricks account | `databricks` alias `accounts` | Account users/groups, workspace assignment (`USER` / `ADMIN`) |
-| Databricks workspace | `databricks` | Entitlements, shared-cluster ACLs (`CAN_RESTART`), catalogs, schemas, UC grants |
+| Databricks workspace | `databricks` | Entitlements, shared-cluster ACLs (`CAN_RESTART`), PAT ACLs (`CAN_USE`), catalogs, schemas, UC grants |
 
 New catalogs use managed storage under the existing sandbox path:
 
@@ -25,6 +25,7 @@ New catalogs use managed storage under the existing sandbox path:
 - Already applied:
   1. `bootstrap-unity-catalog` → copy `storage_root`
   2. `deploy-databricks-azure` with **`create_actuarial_catalog = true`** once (creates `sandbox-uc-location` required for training catalog storage)
+- **Personal access tokens**: at least one PAT must already exist in the workspace before Terraform can manage token permissions (Databricks API prerequisite). A workspace/account admin creates that first token once if needed.
 
 ```bash
 az login
@@ -97,6 +98,8 @@ Unless overridden per catalog with `privileges`:
 - `SELECT`, `MODIFY`
 
 Cluster create entitlement defaults to **false**. Apply grants **`CAN_RESTART`** on the shared all-purpose cluster (`cluster_id` from deploy) so trainees can attach to and start it. The example tfvars gives each trainee a personal `actuarial_<firstname>` catalog with those privileges.
+
+Trainees also get **`CAN_USE`** on personal access tokens so they can create PATs for local CLI/SDK authentication without being workspace or account admins. There can be only one token-permissions resource per workspace; this stack owns it for all `training_users` / `training_groups`.
 
 ## Destroy
 

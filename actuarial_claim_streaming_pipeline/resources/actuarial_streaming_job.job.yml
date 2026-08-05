@@ -1,0 +1,51 @@
+# Setup schema → land sample CSVs → refresh streaming bronze pipeline.
+
+resources:
+  jobs:
+    actuarial_streaming_job:
+      name: actuarial_streaming_job
+
+      trigger:
+        periodic:
+          interval: 1
+          unit: DAYS
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: streaming
+        - name: landing_path
+          default: ${var.landing_volume_path}
+        - name: source_path
+          default: ${workspace.file_path}/fixtures/sample-data
+        - name: claims_batch
+          default: "01"
+
+      tasks:
+        - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/01_setup.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: landing
+
+        - task_key: land_sample_data
+          depends_on:
+            - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/land_sample_data.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              landing_path: "{{job.parameters.landing_path}}"
+              source_path: "{{job.parameters.source_path}}"
+              claims_batch: "{{job.parameters.claims_batch}}"
+
+        - task_key: refresh_pipeline
+          depends_on:
+            - task_key: land_sample_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.actuarial_claim_streaming_etl.id}

@@ -1,0 +1,23 @@
+postcode,region_name,wind_risk_band
+4870,Cairns QLD,T-W
+4740,Mackay QLD,Q-S
+4825,Mount Isa QLD,B-F
+0800,Darwin NT,T-W
+0810,Darwin NT,T-W
+4700,Rockhampton QLD,Q-S
+4703,Rockhampton QLD,Q-S
+4350,Toowoomba QLD,B-F
+6000,Perth WA,B-F
+6721,Port Hedland WA,T-W
+6714,Karratha WA,T-W
+4680,Gladstone QLD,L-P
+4655,Hervey Bay QLD,L-P
+4879,Innisfail QLD,T-W
+4737,Bowen QLD,Q-S
+0850,Alice Springs NT,B-F
+4720,Charters Towers QLD,L-P
+4825,Cloncurry QLD,B-F
+4802,Townsville QLD,T-W
+4810,Townsville QLD,T-W
+,Missing Postcode Zone,T-W
+4870,Cairns QLD CONFLICT,HIGH

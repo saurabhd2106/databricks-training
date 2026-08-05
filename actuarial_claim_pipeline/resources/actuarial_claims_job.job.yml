@@ -1,0 +1,95 @@
+# Job that runs the actuarial claims lakehouse pipeline on serverless compute.
+# Tasks: setup → bronze → data_quality → silver → gold
+
+resources:
+  jobs:
+    actuarial_claims_job:
+      name: actuarial_claims_job
+
+      # Daily at 09:00 Asia/Kolkata (IST). Paused automatically in the dev target.
+      schedule:
+        quartz_cron_expression: "0 0 9 * * ?"
+        timezone_id: Asia/Kolkata
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: volume_name
+          default: ${var.volume_name}
+        - name: bronze_write_mode
+          default: ${var.bronze_write_mode}
+        - name: overwrite_schema
+          default: ${var.overwrite_schema}
+
+      tasks:
+        - task_key: setup
+          environment_key: default
+          notebook_task:
+            notebook_path: ../src/notebooks/01_setup.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: "{{job.parameters.volume_name}}"
+              bronze_write_mode: "{{job.parameters.bronze_write_mode}}"
+              overwrite_schema: "{{job.parameters.overwrite_schema}}"
+
+        - task_key: bronze
+          environment_key: default
+          depends_on:
+            - task_key: setup
+          notebook_task:
+            notebook_path: ../src/notebooks/02_bronze_ingest.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: "{{job.parameters.volume_name}}"
+              bronze_write_mode: "{{job.parameters.bronze_write_mode}}"
+              overwrite_schema: "{{job.parameters.overwrite_schema}}"
+
+        - task_key: data_quality
+          environment_key: default
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: ../src/notebooks/03_data_quality.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: "{{job.parameters.volume_name}}"
+              bronze_write_mode: "{{job.parameters.bronze_write_mode}}"
+              overwrite_schema: "{{job.parameters.overwrite_schema}}"
+
+        - task_key: silver
+          environment_key: default
+          depends_on:
+            - task_key: data_quality
+          notebook_task:
+            notebook_path: ../src/notebooks/04_silver.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: "{{job.parameters.volume_name}}"
+              bronze_write_mode: "{{job.parameters.bronze_write_mode}}"
+              overwrite_schema: "{{job.parameters.overwrite_schema}}"
+
+        - task_key: gold
+          environment_key: default
+          depends_on:
+            - task_key: silver
+          notebook_task:
+            notebook_path: ../src/notebooks/05_gold.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              volume_name: "{{job.parameters.volume_name}}"
+              bronze_write_mode: "{{job.parameters.bronze_write_mode}}"
+              overwrite_schema: "{{job.parameters.overwrite_schema}}"
+
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../../dist/*.whl

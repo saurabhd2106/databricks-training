@@ -1,0 +1,25 @@
+# Lakeflow Declarative Pipeline: streaming bronze via Auto Loader.
+#
+# Triggered (default) serverless updates. Land task uses existing_cluster_id.
+
+resources:
+  pipelines:
+    actuarial_claim_streaming_etl:
+      name: actuarial_claim_streaming_etl
+      catalog: ${var.catalog}
+      schema: streaming
+      serverless: true
+      root_path: "../src/actuarial_claim_streaming_etl"
+
+      libraries:
+        - glob:
+            include: ../src/actuarial_claim_streaming_etl/transformations/**
+
+      configuration:
+        landing_path: ${var.landing_volume_path}
+
+      # Wheel artifact (editable installs are unreliable for serverless pipeline envs).
+      # Glob is resolved from the bundle root (where dist/ is produced by artifacts).
+      environment:
+        dependencies:
+          - dist/*.whl

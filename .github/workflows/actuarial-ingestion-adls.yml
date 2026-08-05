@@ -1,0 +1,71 @@
+# Test, validate, deploy, and run the actuarial-ingestion-adls Databricks Asset Bundle.
+# Trigger manually via Actions → "Actuarial ingestion ADLS" → Run workflow.
+# Requires repo secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
+# See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
+
+name: Actuarial ingestion ADLS
+
+concurrency:
+  group: actuarial-ingestion-adls-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial-ingestion-adls
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run unit tests
+        run: uv run pytest tests/
+
+  validate:
+    name: Validate bundle
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial-ingestion-adls
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Validate
+        run: databricks bundle validate --target prod
+
+  deploy_and_run:
+    name: Deploy and run
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: actuarial-ingestion-adls
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Deploy
+        run: databricks bundle deploy --target prod
+
+      - name: Run actuarial_ingestion_job
+        run: databricks bundle run actuarial_ingestion_job --target prod

@@ -5,21 +5,9 @@ name: Claims pipeline
 
 concurrency:
   group: claims-pipeline-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "claims_pipeline_saurabh/**"
-      - ".github/workflows/claims-pipeline.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "claims_pipeline_saurabh/**"
-      - ".github/workflows/claims-pipeline.yml"
   workflow_dispatch:
 
 env:
@@ -45,7 +33,6 @@ jobs:
   deploy_and_run:
     name: Deploy and run
     needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:

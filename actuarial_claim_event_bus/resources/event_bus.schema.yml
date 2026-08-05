@@ -1,0 +1,8 @@
+# Unity Catalog schema for Event Hubs bronze Streaming Tables.
+
+resources:
+  schemas:
+    actuarial_event_bus:
+      catalog_name: ${var.catalog}
+      name: event_bus
+      comment: Actuarial bronze Streaming Tables from Azure Event Hubs (Kafka protocol).

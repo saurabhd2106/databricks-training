@@ -1,0 +1,5 @@
+event_id,event_name,start_date,end_date
+CYC-2025-01,Cyclone Alpha,2025/02/08,2025-02-14
+CYC-2025-02,Cyclone Beta,2025-11-20,2025-11-25
+CYC-BAD-DATES,Cyclone Bad,2025-03-20,2025-03-10
+CYC-BAD-NULL,,2025-01-01,2025-01-05

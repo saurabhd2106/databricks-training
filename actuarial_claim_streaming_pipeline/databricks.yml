@@ -1,0 +1,47 @@
+# Declarative Automation Bundle: actuarial streaming bronze (Auto Loader Streaming Tables).
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+bundle:
+  name: actuarial_claim_streaming_pipeline
+  uuid: 6cbe270f-796b-4c86-bab2-75c08f55a05a
+
+include:
+  - resources/*.yml
+
+artifacts:
+  python_artifact:
+    type: whl
+    build: uv build --wheel
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for streaming bronze tables
+  cluster_id:
+    description: Existing all-purpose cluster ID for land/setup notebook tasks
+  landing_volume_path:
+    description: UC Volume path where sample CSVs are landed for Auto Loader
+
+targets:
+  dev:
+    # Development copies get a '[dev user]' prefix; schedules/triggers are paused.
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+    variables:
+      catalog: actuarial
+      cluster_id: 0730-111218-jwuz715u
+      landing_volume_path: /Volumes/actuarial/streaming/landing
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+      root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: actuarial
+      cluster_id: 0730-111218-jwuz715u
+      landing_volume_path: /Volumes/actuarial/streaming/landing
+    permissions:
+      - user_name: databricks-np@saurabhuptut.onmicrosoft.com
+        level: CAN_MANAGE

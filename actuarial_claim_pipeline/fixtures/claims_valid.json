@@ -1,0 +1,30 @@
+[
+  {
+    "claim_id": "CLM-001",
+    "policy_id": "POL-001",
+    "event_id": "CYC-2025-01",
+    "date_of_loss": "2025-02-10",
+    "reported_date": "2025-02-17",
+    "peril_type": "Wind",
+    "claim_status": "Open",
+    "incurred_amount": "10000.00",
+    "paid_to_date": "2500.00",
+    "snapshot_date": "2025-02-17",
+    "source_file_name": "claims_bordereau.csv",
+    "ingestion_timestamp": "2025-02-17T00:00:00.000Z"
+  },
+  {
+    "claim_id": "CLM-002",
+    "policy_id": "POL-001",
+    "event_id": null,
+    "date_of_loss": "2025-03-01",
+    "reported_date": "2025-03-05",
+    "peril_type": "Riverine Flood",
+    "claim_status": "Closed",
+    "incurred_amount": "5000.00",
+    "paid_to_date": "5000.00",
+    "snapshot_date": "2025-03-05",
+    "source_file_name": "claims_bordereau.csv",
+    "ingestion_timestamp": "2025-02-17T00:00:00.000Z"
+  }
+]

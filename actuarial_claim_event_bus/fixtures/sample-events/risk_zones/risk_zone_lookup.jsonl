@@ -1,0 +1,22 @@
+{"postcode":4870,"region_name":"Cairns QLD","wind_risk_band":"T-W"}
+{"postcode":4740,"region_name":"Mackay QLD","wind_risk_band":"Q-S"}
+{"postcode":4825,"region_name":"Mount Isa QLD","wind_risk_band":"B-F"}
+{"postcode":800,"region_name":"Darwin NT","wind_risk_band":"T-W"}
+{"postcode":810,"region_name":"Darwin NT","wind_risk_band":"T-W"}
+{"postcode":4700,"region_name":"Rockhampton QLD","wind_risk_band":"Q-S"}
+{"postcode":4703,"region_name":"Rockhampton QLD","wind_risk_band":"Q-S"}
+{"postcode":4350,"region_name":"Toowoomba QLD","wind_risk_band":"B-F"}
+{"postcode":6000,"region_name":"Perth WA","wind_risk_band":"B-F"}
+{"postcode":6721,"region_name":"Port Hedland WA","wind_risk_band":"T-W"}
+{"postcode":6714,"region_name":"Karratha WA","wind_risk_band":"T-W"}
+{"postcode":4680,"region_name":"Gladstone QLD","wind_risk_band":"L-P"}
+{"postcode":4655,"region_name":"Hervey Bay QLD","wind_risk_band":"L-P"}
+{"postcode":4879,"region_name":"Innisfail QLD","wind_risk_band":"T-W"}
+{"postcode":4737,"region_name":"Bowen QLD","wind_risk_band":"Q-S"}
+{"postcode":850,"region_name":"Alice Springs NT","wind_risk_band":"B-F"}
+{"postcode":4720,"region_name":"Charters Towers QLD","wind_risk_band":"L-P"}
+{"postcode":4825,"region_name":"Cloncurry QLD","wind_risk_band":"B-F"}
+{"postcode":4802,"region_name":"Townsville QLD","wind_risk_band":"T-W"}
+{"postcode":4810,"region_name":"Townsville QLD","wind_risk_band":"T-W"}
+{"postcode":null,"region_name":"Missing Postcode Zone","wind_risk_band":"T-W"}
+{"postcode":4870,"region_name":"Cairns QLD CONFLICT","wind_risk_band":"HIGH"}

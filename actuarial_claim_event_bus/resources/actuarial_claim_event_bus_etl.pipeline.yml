@@ -1,0 +1,29 @@
+# Lakeflow Declarative Pipeline: continuous Event Hubs (Kafka) bronze ingest.
+#
+# Continuous serverless updates. Seed notebook uses existing_cluster_id.
+
+resources:
+  pipelines:
+    actuarial_claim_event_bus_etl:
+      name: actuarial_claim_event_bus_etl
+      catalog: ${var.catalog}
+      schema: event_bus
+      serverless: true
+      continuous: true
+      root_path: "../src/actuarial_claim_event_bus_etl"
+
+      libraries:
+        - glob:
+            include: ../src/actuarial_claim_event_bus_etl/transformations/**
+
+      configuration:
+        eh_bootstrap_servers: ${var.eh_bootstrap_servers}
+        eh_claims_topic: ${var.eh_claims_topic}
+        eh_premiums_topic: ${var.eh_premiums_topic}
+        eh_risk_zones_topic: ${var.eh_risk_zones_topic}
+        eh_cyclone_events_topic: ${var.eh_cyclone_events_topic}
+        eh_jaas_config: ${var.eh_jaas_config}
+
+      environment:
+        dependencies:
+          - --editable ${workspace.file_path}

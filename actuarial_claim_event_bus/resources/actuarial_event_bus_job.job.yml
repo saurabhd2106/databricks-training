@@ -1,0 +1,61 @@
+# Setup schema → seed Event Hubs from fixtures → start continuous bronze pipeline.
+
+resources:
+  jobs:
+    actuarial_event_bus_job:
+      name: actuarial_event_bus_job
+
+      trigger:
+        periodic:
+          interval: 1
+          unit: DAYS
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: source_path
+          default: ${workspace.file_path}/fixtures/sample-events
+        - name: eh_bootstrap_servers
+          default: ${var.eh_bootstrap_servers}
+        - name: eh_claims_topic
+          default: ${var.eh_claims_topic}
+        - name: eh_premiums_topic
+          default: ${var.eh_premiums_topic}
+        - name: eh_risk_zones_topic
+          default: ${var.eh_risk_zones_topic}
+        - name: eh_cyclone_events_topic
+          default: ${var.eh_cyclone_events_topic}
+        - name: eh_jaas_config
+          default: ${var.eh_jaas_config}
+
+      tasks:
+        - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/01_setup.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+
+        - task_key: seed_event_hubs
+          depends_on:
+            - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/seed_event_hubs.ipynb
+            base_parameters:
+              source_path: "{{job.parameters.source_path}}"
+              eh_bootstrap_servers: "{{job.parameters.eh_bootstrap_servers}}"
+              eh_claims_topic: "{{job.parameters.eh_claims_topic}}"
+              eh_premiums_topic: "{{job.parameters.eh_premiums_topic}}"
+              eh_risk_zones_topic: "{{job.parameters.eh_risk_zones_topic}}"
+              eh_cyclone_events_topic: "{{job.parameters.eh_cyclone_events_topic}}"
+              eh_jaas_config: "{{job.parameters.eh_jaas_config}}"
+
+        - task_key: start_pipeline
+          depends_on:
+            - task_key: seed_event_hubs
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.actuarial_claim_event_bus_etl.id}

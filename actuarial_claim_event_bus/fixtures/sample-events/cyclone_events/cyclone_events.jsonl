@@ -1,0 +1,8 @@
+{"event_id":"CYC-2023-01","event_name":"Cyclone Nadia (illustrative)","start_date":"2023-02-11","end_date":"2023-02-14"}
+{"event_id":"CYC-2023-02","event_name":"Cyclone Orson (illustrative)","start_date":"2023-12-03","end_date":"2023-12-06"}
+{"event_id":"CYC-2024-01","event_name":"Cyclone Priya (illustrative)","start_date":"2024-01-22","end_date":"2024-01-26"}
+{"event_id":"CYC-2024-02","event_name":"Cyclone Ronan (illustrative)","start_date":"2024-03-15","end_date":"2024-03-18"}
+{"event_id":"CYC-2025-01","event_name":"Cyclone Sable (illustrative)","start_date":"2025-02-08","end_date":"2025-02-12"}
+{"event_id":"CYC-2025-02","event_name":"Cyclone Tavita (illustrative)","start_date":"2025-11-27","end_date":"2025-11-30"}
+{"event_id":"CYC-2025-01","event_name":"Cyclone Sable DUPLICATE (conflicting)","start_date":"2025-02-01","end_date":"2025-02-05"}
+{"event_id":"CYC-2026-01","event_name":"Cyclone BadDates (illustrative)","start_date":"2025/02/08","end_date":"2025-01-01"}

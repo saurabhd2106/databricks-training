@@ -1,0 +1,65 @@
+# Setup schema → land sample CSVs to ADLS → batch Auto Loader (availableNow) bronze ingest.
+
+resources:
+  jobs:
+    actuarial_ingestion_job:
+      name: actuarial_ingestion_job
+
+      # Daily at 09:00 Asia/Kolkata (IST). Paused automatically in the dev target.
+      schedule:
+        quartz_cron_expression: "0 0 9 * * ?"
+        timezone_id: Asia/Kolkata
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: landing_path
+          default: ${var.landing_path}
+        - name: autoloader_state_path
+          default: ${var.autoloader_state_path}
+        - name: source_path
+          default: ${workspace.file_path}/fixtures/sample-data
+        - name: claims_batch
+          default: "01"
+
+      tasks:
+        - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/01_setup.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+
+        - task_key: land_sample_data
+          depends_on:
+            - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/notebooks/land_sample_data.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              landing_path: "{{job.parameters.landing_path}}"
+              source_path: "{{job.parameters.source_path}}"
+              claims_batch: "{{job.parameters.claims_batch}}"
+
+        - task_key: bronze_ingest
+          depends_on:
+            - task_key: land_sample_data
+          environment_key: default
+          notebook_task:
+            notebook_path: ../src/notebooks/02_bronze_ingest.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              landing_path: "{{job.parameters.landing_path}}"
+              autoloader_state_path: "{{job.parameters.autoloader_state_path}}"
+
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../../dist/*.whl

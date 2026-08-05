@@ -1,0 +1,66 @@
+# Declarative Automation Bundle: continuous Event Hubs (Kafka) bronze ingest.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+bundle:
+  name: actuarial_claim_event_bus
+  uuid: 2c7a663e-6dd4-47cc-bed8-13ca069e2987
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for event-bus bronze tables
+  schema:
+    description: Schema for Event Hubs bronze Streaming Tables
+  cluster_id:
+    description: Existing all-purpose cluster ID for setup/seed notebook tasks
+  eh_bootstrap_servers:
+    description: Event Hubs Kafka bootstrap (namespace.servicebus.windows.net:9093)
+  eh_claims_topic:
+    description: Event Hub / Kafka topic for claims JSON events
+  eh_premiums_topic:
+    description: Event Hub / Kafka topic for premium JSON events
+  eh_risk_zones_topic:
+    description: Event Hub / Kafka topic for risk-zone JSON events
+  eh_cyclone_events_topic:
+    description: Event Hub / Kafka topic for cyclone-event JSON events
+  eh_jaas_config:
+    description: SASL JAAS config (Databricks secret reference for the Event Hubs connection string JAAS)
+
+targets:
+  dev:
+    # Development copies get a '[dev user]' prefix; schedules/triggers are paused.
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+    variables:
+      catalog: actuarial
+      schema: event_bus
+      cluster_id: 0730-111218-jwuz715u
+      eh_bootstrap_servers: YOUR_NAMESPACE.servicebus.windows.net:9093
+      eh_claims_topic: actuarial.claims
+      eh_premiums_topic: actuarial.premiums
+      eh_risk_zones_topic: actuarial.risk_zones
+      eh_cyclone_events_topic: actuarial.cyclone_events
+      eh_jaas_config: "{{secrets/actuarial-event-bus/eh-jaas}}"
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+      root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: actuarial
+      schema: event_bus
+      cluster_id: 0730-111218-jwuz715u
+      eh_bootstrap_servers: YOUR_NAMESPACE.servicebus.windows.net:9093
+      eh_claims_topic: actuarial.claims
+      eh_premiums_topic: actuarial.premiums
+      eh_risk_zones_topic: actuarial.risk_zones
+      eh_cyclone_events_topic: actuarial.cyclone_events
+      eh_jaas_config: "{{secrets/actuarial-event-bus/eh-jaas}}"
+    permissions:
+      - user_name: databricks-np@saurabhuptut.onmicrosoft.com
+        level: CAN_MANAGE

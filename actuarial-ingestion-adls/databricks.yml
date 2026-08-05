@@ -1,0 +1,57 @@
+# Declarative Automation Bundle: batch Auto Loader ingest from ADLS (abfss).
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+bundle:
+  name: actuarial_ingestion_adls
+  uuid: 8f3c2a91-4b6e-4d7a-9c1f-2e5a8b0d6f34
+
+include:
+  - resources/*.yml
+
+artifacts:
+  python_artifact:
+    type: whl
+    build: uv build --wheel
+
+# Variable declarations. Assigned per target below.
+variables:
+  catalog:
+    description: Unity Catalog catalog for bronze tables
+  schema:
+    description: Schema for batch Auto Loader bronze tables
+  cluster_id:
+    description: Existing all-purpose cluster ID for setup/land notebook tasks
+  landing_path:
+    description: ADLS abfss path where CSV files land for Auto Loader
+  autoloader_state_path:
+    description: ADLS abfss path for Auto Loader schemaLocation and checkpoints
+
+targets:
+  dev:
+    # Development copies get a '[dev user]' prefix; schedules are paused by default.
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+    variables:
+      catalog: actuarial
+      schema: ingestion
+      cluster_id: 0730-111218-jwuz715u
+      # Under actuarial-uc-location ({uc_storage_root}/actuarial).
+      landing_path: abfss://metastore@dbxucfc9c48d2meta.dfs.core.windows.net/actuarial/ingestion/landing
+      autoloader_state_path: abfss://metastore@dbxucfc9c48d2meta.dfs.core.windows.net/actuarial/ingestion/_autoloader
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+      root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: actuarial
+      schema: ingestion
+      cluster_id: 0730-111218-jwuz715u
+      landing_path: abfss://metastore@dbxucfc9c48d2meta.dfs.core.windows.net/actuarial/ingestion/landing
+      autoloader_state_path: abfss://metastore@dbxucfc9c48d2meta.dfs.core.windows.net/actuarial/ingestion/_autoloader
+    permissions:
+      - user_name: databricks-np@saurabhuptut.onmicrosoft.com
+        level: CAN_MANAGE
