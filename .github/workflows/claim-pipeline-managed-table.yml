@@ -1,6 +1,6 @@
 # Validate, deploy, and run the claim_pipeline_managed_table Databricks Asset Bundle.
 # Trigger manually via Actions → "Claim pipeline managed table" → Run workflow.
-# Requires repo secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
+# Requires GitHub environment "dev" secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
 # See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
 
 name: Claim pipeline managed table
@@ -20,6 +20,7 @@ jobs:
   validate:
     name: Validate bundle
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: claim_pipeline_managed_table
@@ -36,6 +37,7 @@ jobs:
     name: Deploy and run
     needs: validate
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: claim_pipeline_managed_table
