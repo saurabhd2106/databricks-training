@@ -1,4 +1,4 @@
-# Gold: actuarial marts (event losses, policy loss ratio, risk-band performance)
+# Gold: actuarial marts + medallion inventory for Lakeview dashboards
 dataFlowId: gold_marts
 dataFlowGroup: claims_gold
 dataFlowType: materialized_view
@@ -8,14 +8,34 @@ materializedViews:
     sqlPath: ./event_loss_summary.sql
     tableDetails:
       database: '{gold_schema}'
-      comment: Claim counts and loss totals by cyclone event.
+      comment: Cat vs non-cat claim counts and loss totals by cyclone event, region, and peril.
   policy_loss_ratio:
     sqlPath: ./policy_loss_ratio.sql
     tableDetails:
       database: '{gold_schema}'
-      comment: Premium vs incurred loss ratio by insurer, wind risk band, and building type.
+      comment: Premium vs incurred loss ratio by insurer, region, wind risk band, building type, and mitigation.
   risk_band_performance:
     sqlPath: ./risk_band_performance.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Loss ratio and claim frequency by wind risk band and region.
+  claims_summary:
+    sqlPath: ./claims_summary.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Claims frequency, severity, and settlement by peril, status, and risk dimensions.
+  claims_development:
+    sqlPath: ./claims_development.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Reporting lag, payment progress, and reserve by peril and loss/reported month.
+  portfolio_exposure:
+    sqlPath: ./portfolio_exposure.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Policy exposure (sum insured and premium) by insurer and risk dimensions.
+  medallion_inventory:
+    sqlPath: ./medallion_inventory.sql
+    tableDetails:
+      database: '{gold_schema}'
+      comment: Row counts and freshness across bronze, silver, and gold tables for pipeline monitoring.

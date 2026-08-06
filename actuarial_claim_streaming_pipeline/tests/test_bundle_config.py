@@ -25,6 +25,10 @@ def test_pipeline_is_serverless_triggered():
     assert cfg.get("continuous") in (None, False)
     assert cfg["schema"] == "streaming"
     assert cfg["configuration"]["landing_path"] == "${var.landing_volume_path}"
+    event_log = cfg["event_log"]
+    assert event_log["name"] == "actuarial_claim_streaming_etl_event_log"
+    assert event_log["catalog"] == "${var.catalog}"
+    assert event_log["schema"] == "${resources.schemas.actuarial_streaming.name}"
 
 
 def test_job_task_order_and_claims_batch_default():
@@ -84,3 +88,72 @@ def test_ci_workflow_exists():
     assert "actuarial_claim_streaming_pipeline" in text
     assert "actuarial_streaming_job" in text
     assert "test_smoke_integration.py" in text
+
+
+def test_gold_dashboards_and_warehouse_id():
+    bundle = yaml.safe_load((ROOT / "databricks.yml").read_text())
+    assert "warehouse_id" in bundle["variables"]
+    for target in ("dev", "prod"):
+        assert bundle["targets"][target]["variables"]["warehouse_id"]
+
+    expected = {
+        "underwriting_portfolio": "underwriting_portfolio.lvdash.json",
+        "claims_operations": "claims_operations.lvdash.json",
+        "catastrophe_events": "catastrophe_events.lvdash.json",
+        "claims_development": "claims_development.lvdash.json",
+    }
+    for resource_key, json_name in expected.items():
+        yml = yaml.safe_load((ROOT / "resources" / f"{resource_key}.dashboard.yml").read_text())
+        dash = yml["resources"]["dashboards"][resource_key]
+        assert dash["warehouse_id"] == "${var.warehouse_id}"
+        assert dash["dataset_catalog"] == "${var.catalog}"
+        assert dash["dataset_schema"] == "${resources.schemas.actuarial_streaming.name}"
+        assert (ROOT / "src" / "dashboards" / json_name).is_file()
+        payload = (ROOT / "src" / "dashboards" / json_name).read_text()
+        assert "actuarial.streaming." not in payload
+        assert "gold_" in payload
+
+
+def test_pipeline_monitoring_dashboard():
+    yml = yaml.safe_load((ROOT / "resources" / "pipeline_monitoring.dashboard.yml").read_text())
+    dash = yml["resources"]["dashboards"]["pipeline_monitoring"]
+    assert dash["warehouse_id"] == "${var.warehouse_id}"
+    assert dash["display_name"] == "Pipeline Monitoring"
+    assert dash["dataset_catalog"] == "${var.catalog}"
+    assert dash["dataset_schema"] == "${resources.schemas.actuarial_streaming.name}"
+
+    path = ROOT / "src" / "dashboards" / "pipeline_monitoring.lvdash.json"
+    assert path.is_file()
+    payload = path.read_text()
+    assert "actuarial.streaming." not in payload
+    for needle in (
+        "quarantine_bronze_",
+        "bronze_",
+        "silver_",
+        "gold_",
+        "medallion_counts",
+        "quarantine_summary",
+    ):
+        assert needle in payload, f"missing {needle} in pipeline monitoring dashboard"
+
+
+def test_pipeline_event_log_dashboard():
+    yml = yaml.safe_load((ROOT / "resources" / "pipeline_event_log.dashboard.yml").read_text())
+    dash = yml["resources"]["dashboards"]["pipeline_event_log"]
+    assert dash["warehouse_id"] == "${var.warehouse_id}"
+    assert dash["display_name"] == "Pipeline Event Log"
+    assert dash["dataset_catalog"] == "${var.catalog}"
+    assert dash["dataset_schema"] == "${resources.schemas.actuarial_streaming.name}"
+
+    path = ROOT / "src" / "dashboards" / "pipeline_event_log.lvdash.json"
+    assert path.is_file()
+    payload = path.read_text()
+    assert "actuarial.streaming." not in payload
+    for needle in (
+        "actuarial_claim_streaming_etl_event_log",
+        "update_runs",
+        "flow_metrics",
+        "expectation_metrics",
+        "error_events",
+    ):
+        assert needle in payload, f"missing {needle} in pipeline event log dashboard"

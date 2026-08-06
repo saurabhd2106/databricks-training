@@ -1,0 +1,10 @@
+# UC Volume for landing sample CSVs before feature engineering.
+
+resources:
+  volumes:
+    actuarial_ml_landing:
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      name: landing
+      volume_type: MANAGED
+      comment: Landing zone for ML demo sample CSVs (claims + premiums).

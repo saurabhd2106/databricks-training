@@ -1,0 +1,11 @@
+expect_or_drop:
+  - name: postcode_not_null
+    constraint: postcode IS NOT NULL AND length(trim(postcode)) > 0
+    tag: Completeness
+expect:
+  - name: wind_risk_band_not_empty
+    constraint: wind_risk_band IS NOT NULL AND length(trim(wind_risk_band)) > 0
+    tag: Completeness
+  - name: region_name_not_empty
+    constraint: region_name IS NOT NULL AND length(trim(region_name)) > 0
+    tag: Completeness

@@ -1,5 +1,6 @@
 tokens:
-  bronze_schema: actuarial_lff.bronze{logical_env}
-  silver_schema: actuarial_lff.silver{logical_env}
-  gold_schema: actuarial_lff.gold{logical_env}
-  sample_file_location: /Volumes/actuarial_lff/bronze{logical_env}/landing
+  # All medallion layers publish into actuarial.sample (table names stay layer-distinct).
+  bronze_schema: actuarial.sample{logical_env}
+  silver_schema: actuarial.sample{logical_env}
+  gold_schema: actuarial.sample{logical_env}
+  sample_file_location: /Volumes/actuarial/sample{logical_env}/landing

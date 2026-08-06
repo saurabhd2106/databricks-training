@@ -18,8 +18,15 @@ resources:
       configuration:
         landing_path: ${var.landing_volume_path}
 
+      # Publish event log to UC so Lakeview can query a stable table (not event_log(pipeline_id)).
+      # Do not delete this table — removing it can break future pipeline updates.
+      event_log:
+        name: actuarial_claim_streaming_etl_event_log
+        catalog: ${var.catalog}
+        schema: ${resources.schemas.actuarial_streaming.name}
+
       # Wheel artifact (editable installs are unreliable for serverless pipeline envs).
-      # Glob is resolved from the bundle root (where dist/ is produced by artifacts).
+      # Path is relative to this YAML file; dist/ is produced at the bundle root by artifacts.
       environment:
         dependencies:
-          - dist/*.whl
+          - ../dist/*.whl

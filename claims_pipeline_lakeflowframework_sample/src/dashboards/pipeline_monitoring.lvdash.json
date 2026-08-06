@@ -1,0 +1,282 @@
+{
+  "datasets": [
+    {
+      "name": "medallion_counts",
+      "displayName": "Medallion inventory",
+      "query": "SELECT\n  layer,\n  table_name,\n  row_count,\n  latest_ingest_ts,\n  CASE\n    WHEN latest_ingest_ts IS NULL THEN CAST(NULL AS DOUBLE)\n    ELSE ROUND(TIMESTAMPDIFF(MINUTE, latest_ingest_ts, current_timestamp()) / 60.0, 2)\n  END AS ingest_age_hours\nFROM medallion_inventory"
+    }
+  ],
+  "pages": [
+    {
+      "name": "main",
+      "displayName": "Pipeline Monitoring",
+      "layout": [
+        {
+          "position": { "x": 0, "y": 0, "width": 6, "height": 1 },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# Pipeline Monitoring\nMedallion readiness and ingest freshness across bronze, silver, and gold tables (from `medallion_inventory`)."
+          }
+        },
+        {
+          "position": { "x": 0, "y": 1, "width": 6, "height": 1 },
+          "widget": {
+            "name": "filter_layer",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "layer", "expression": "`layer`" },
+                    { "name": "layer_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "layer", "displayName": "Layer", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Layer" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_bronze_rows",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "bronze_rows",
+                      "expression": "SUM(CASE WHEN `layer` = 'bronze' THEN `row_count` ELSE 0 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "bronze_rows", "displayName": "Bronze rows" }
+              },
+              "frame": { "showTitle": true, "title": "Bronze total rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_silver_current",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "silver_current_rows",
+                      "expression": "SUM(CASE WHEN `table_name` = 'claims_current' THEN `row_count` ELSE 0 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "silver_current_rows", "displayName": "Silver current" }
+              },
+              "frame": { "showTitle": true, "title": "Silver claims current rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 4, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_gold_populated",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "gold_populated",
+                      "expression": "COUNT(CASE WHEN `layer` = 'gold' AND `row_count` > 0 THEN 1 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "gold_populated", "displayName": "Gold tables" }
+              },
+              "frame": { "showTitle": true, "title": "Gold tables with rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 4, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_silver_rows",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "silver_rows",
+                      "expression": "SUM(CASE WHEN `layer` = 'silver' THEN `row_count` ELSE 0 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "silver_rows", "displayName": "Silver rows" }
+              },
+              "frame": { "showTitle": true, "title": "Silver total rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 4, "width": 4, "height": 4 },
+          "widget": {
+            "name": "bar_row_counts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "table_name", "expression": "`table_name`" },
+                    { "name": "row_count", "expression": "SUM(`row_count`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "row_count",
+                  "displayName": "Rows",
+                  "scale": { "type": "quantitative" }
+                },
+                "y": {
+                  "fieldName": "table_name",
+                  "displayName": "Table",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Row counts by table" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 6, "width": 2, "height": 4 },
+          "widget": {
+            "name": "bar_freshness",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "table_name", "expression": "`table_name`" },
+                    {
+                      "name": "ingest_age_hours",
+                      "expression": "MAX(`ingest_age_hours`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "ingest_age_hours",
+                  "displayName": "Age (hours)",
+                  "scale": { "type": "quantitative" }
+                },
+                "y": {
+                  "fieldName": "table_name",
+                  "displayName": "Table",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Ingest age by table (hours)" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 10, "width": 6, "height": 5 },
+          "widget": {
+            "name": "table_medallion",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "layer", "expression": "`layer`" },
+                    { "name": "table_name", "expression": "`table_name`" },
+                    { "name": "row_count", "expression": "`row_count`" },
+                    { "name": "latest_ingest_ts", "expression": "`latest_ingest_ts`" },
+                    { "name": "ingest_age_hours", "expression": "`ingest_age_hours`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "layer", "type": "string", "displayAs": "string", "visible": true, "order": 1, "title": "Layer", "displayName": "Layer" },
+                  { "fieldName": "table_name", "type": "string", "displayAs": "string", "visible": true, "order": 2, "title": "Table", "displayName": "Table" },
+                  { "fieldName": "row_count", "type": "integer", "displayAs": "number", "visible": true, "order": 3, "title": "Rows", "displayName": "Rows", "numberFormat": "0" },
+                  { "fieldName": "latest_ingest_ts", "type": "string", "displayAs": "string", "visible": true, "order": 4, "title": "Latest ingest", "displayName": "Latest ingest" },
+                  { "fieldName": "ingest_age_hours", "type": "float", "displayAs": "number", "visible": true, "order": 5, "title": "Age (hours)", "displayName": "Age (hours)", "numberFormat": "0.00" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Medallion inventory" },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

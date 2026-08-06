@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    pipeline_event_log:
+      display_name: "Pipeline Event Log"
+      file_path: ../src/dashboards/pipeline_event_log.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${resources.schemas.actuarial_streaming.name}

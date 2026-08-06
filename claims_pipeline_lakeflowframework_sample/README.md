@@ -6,7 +6,7 @@ Welcome. This guide walks you through an actuarial **bronze → silver → gold*
 
 Sample CSVs live under `fixtures/sample-data/` (from [`sample-data`](../sample-data/)).
 
-If you want to **build this pipeline from scratch** step by step, use **[docs/MANUAL_BUILD_GUIDE.md](docs/MANUAL_BUILD_GUIDE.md)**. This README is for **understanding** the project by reading top to bottom.
+If you want to **build this pipeline from scratch** step by step (including Lakeview dashboards), use **[docs/MANUAL_BUILD_GUIDE.md](docs/MANUAL_BUILD_GUIDE.md)**. This README is for **understanding** the project by reading top to bottom.
 
 ---
 
@@ -21,9 +21,11 @@ Work through the sections in order. Don’t worry if terms like Auto Loader or C
 5. Key concepts  
 6. Data lineage and landing map  
 7. Bronze, silver, and gold layers (YAML, DQE, SQL, and schemas)  
-8. Repository layout, datasets, and output tables  
-9. Common pitfalls  
-10. Steps to run the whole pipeline, then verify  
+8. AI/BI Lakeview dashboards  
+9. Repository layout, datasets, and output tables  
+10. Common pitfalls  
+11. Steps to run the whole pipeline, then verify  
+12. CI / GitHub Actions  
 
 ---
 
@@ -44,14 +46,12 @@ fixtures/sample-data/*.csv
         ▼
  Job: claims_lff_pipeline_job
         ├── create_schemas_and_tables
-        ├── land_sample_data  ──►  Volume actuarial_lff.bronze.landing
+        ├── land_sample_data  ──►  Volume actuarial.sample.landing
         ├── claims_bronze_pipeline
         ├── claims_silver_pipeline
         └── claims_gold_pipeline
                 │
-                ├── actuarial_lff.bronze.*
-                ├── actuarial_lff.silver.*
-                └── actuarial_lff.gold.*
+                └── actuarial.sample.*   (bronze + silver + gold tables)
 ```
 
 ```mermaid
@@ -62,9 +62,9 @@ flowchart TD
   volume --> bronze[claims_bronze_pipeline]
   bronze --> silver[claims_silver_pipeline]
   silver --> gold[claims_gold_pipeline]
-  bronze --> bronzeTables[actuarial_lff.bronze]
-  silver --> silverTables[actuarial_lff.silver]
-  gold --> goldTables[actuarial_lff.gold]
+  bronze --> bronzeTables[actuarial.sample]
+  silver --> silverTables[actuarial.sample]
+  gold --> goldTables[actuarial.sample]
 ```
 
 ---
@@ -161,7 +161,7 @@ Everything is orchestrated by one Databricks Job: **`claims_lff_pipeline_job`** 
 
 You’ll see five tasks, in order:
 
-1. **`create_schemas_and_tables`** — Notebook on an all-purpose cluster. Ensures catalog `actuarial_lff`, schemas `bronze` / `silver` / `gold`, and the landing volume exist.
+1. **`create_schemas_and_tables`** — Notebook on an all-purpose cluster. Ensures catalog `actuarial`, schema `sample`, and the landing volume exist.
 2. **`land_sample_data`** — Copies the four CSVs from the bundle into the UC Volume under folders like `claims/`, `premiums/`, and so on. Bronze will read from those folders.
 3. **`bronze_pipeline`** — Serverless Lakeflow Framework pipeline (`full_refresh: true` in this job).
 4. **`silver_pipeline`** — Same framework, different filter—only silver specs (`full_refresh: true`).
@@ -226,10 +226,10 @@ That locks this bundle to **YAML** dataflowspecs (don’t mix JSON and YAML spec
 
 ```yaml
 tokens:
-  bronze_schema: actuarial_lff.bronze{logical_env}
-  silver_schema: actuarial_lff.silver{logical_env}
-  gold_schema: actuarial_lff.gold{logical_env}
-  sample_file_location: /Volumes/actuarial_lff/bronze{logical_env}/landing
+  bronze_schema: actuarial.sample{logical_env}
+  silver_schema: actuarial.sample{logical_env}
+  gold_schema: actuarial.sample{logical_env}
+  sample_file_location: /Volumes/actuarial/sample{logical_env}/landing
 ```
 
 When a dataflowspec says `{bronze_schema}` or `{sample_file_location}`, the framework fills these in. `{logical_env}` comes from pipeline config `logicalEnv` (empty by default in this sample).
@@ -282,12 +282,14 @@ A **materialized view (MV)** is a table whose contents are defined by a SQL quer
 
 ### Data quality expectations (DQE)
 
-**Expectations** are row-level rules the pipeline checks while writing silver. In this sample they live in YAML under `expectations/` and attach to a dataflowspec via `dataQualityExpectationsEnabled` / `dataQualityExpectationsPath`.
+**Expectations** are row-level rules the pipeline checks while writing bronze and silver. They live in YAML under each layer’s `expectations/` folder and attach to a dataflowspec via `dataQualityExpectationsEnabled` / `dataQualityExpectationsPath`.
 
 | Section | On failure |
 |---------|------------|
 | `expect_or_drop` | Row is **dropped** from the table |
 | `expect` | Row is **kept**; failure is tracked in DQ metrics |
+
+Tags group rules for ops (`Completeness`, `Validity`, `Consistency`). Bronze focuses on key / non-empty string hygiene; silver applies typed domain rules after casts. Gold marts and `claims_current` inherit quality from upstream silver (no separate DQE files).
 
 ### File schema vs target schema
 
@@ -313,13 +315,13 @@ Here’s the big picture of how entities move through layers:
 | `claims_bordereau.csv` | `claims/` | `claims_bordereau` | `claims_snapshots` → `claims_current` | All three marts |
 | `premium_bordereau.csv` | `premiums/` | `premium_bordereau` | `policies` | Loss ratio / risk band |
 | `risk_zone_lookup.csv` | `risk_zones/` | `risk_zone_lookup` | `risk_zones` | (lookup; policies carry band/region too) |
-| `cyclone_events.csv` | `cyclone_events/` | `cyclone_events` | `cyclone_events` | `event_loss_summary` |
+| `cyclone_events.csv` | `cyclone_events/` | `bronze_cyclone_events` | `cyclone_events` | `event_loss_summary` |
 
 ### Landing map (filename → volume subdir)
 
 The `land_sample_data` notebook copies fixtures into the UC Volume like this:
 
-| File | Subdir under `/Volumes/actuarial_lff/bronze/landing/` |
+| File | Subdir under `/Volumes/actuarial/sample/landing/` |
 |------|------------------------------------------------------|
 | `claims_bordereau.csv` | `claims/` |
 | `premium_bordereau.csv` | `premiums/` |
@@ -391,27 +393,30 @@ Common knobs: `sourceType: delta`, `cdfEnabled: true`, `cdcSettings` with keys +
 
 | Spec | Source → target | Keys / notes |
 |------|-----------------|--------------|
-| [`claims_snapshots_main.yaml`](src/dataflows/silver/dataflowspec/claims_snapshots_main.yaml) | `bronze.claims_bordereau` → `silver.claims_snapshots` | Keys: `claim_id`, `snapshot_date`. Casts dates/decimals. Attaches DQE file below. |
-| [`claims_current_main.yaml`](src/dataflows/silver/dataflowspec/claims_current_main.yaml) | MV over snapshots | Latest row per `claim_id` (see SQL walkthrough). |
-| [`policies_main.yaml`](src/dataflows/silver/dataflowspec/policies_main.yaml) | `bronze.premium_bordereau` → `silver.policies` | Key: `policy_id`. Adds derived `is_active` from policy end date. |
-| [`cyclone_events_main.yaml`](src/dataflows/silver/dataflowspec/cyclone_events_main.yaml) | `bronze.cyclone_events` → `silver.cyclone_events` | Key: `event_id`. `dataFlowId` is `silver_cyclone_events` to avoid clashing with bronze’s id. |
-| [`risk_zones_main.yaml`](src/dataflows/silver/dataflowspec/risk_zones_main.yaml) | `bronze.risk_zone_lookup` → `silver.risk_zones` | Key: `postcode` (dedupes to one row per postcode). |
+| [`claims_snapshots_main.yaml`](src/dataflows/silver/dataflowspec/claims_snapshots_main.yaml) | `bronze.claims_bordereau` → `silver.claims_snapshots` | Keys: `claim_id`, `snapshot_date`. Casts dates/decimals. Attaches DQE. |
+| [`claims_current_main.yaml`](src/dataflows/silver/dataflowspec/claims_current_main.yaml) | MV over snapshots | Latest row per `claim_id` (see SQL walkthrough). No separate DQE. |
+| [`policies_main.yaml`](src/dataflows/silver/dataflowspec/policies_main.yaml) | `bronze.premium_bordereau` → `silver.policies` | Key: `policy_id`. Adds derived `is_active`. Attaches DQE. |
+| [`cyclone_events_main.yaml`](src/dataflows/silver/dataflowspec/cyclone_events_main.yaml) | `bronze.cyclone_events` → `silver.cyclone_events` | Key: `event_id`. `dataFlowId` is `silver_cyclone_events`. Attaches DQE. |
+| [`risk_zones_main.yaml`](src/dataflows/silver/dataflowspec/risk_zones_main.yaml) | `bronze.risk_zone_lookup` → `silver.risk_zones` | Key: `postcode` (dedupes). Attaches DQE. |
 
-### Walkthrough: `claims_snapshots_dqe.yaml`
+### Walkthrough: data quality expectations
 
-Open [`src/dataflows/silver/expectations/claims_snapshots_dqe.yaml`](src/dataflows/silver/expectations/claims_snapshots_dqe.yaml). It’s wired from the snapshots dataflowspec:
+Each bronze and silver SCD1 dataflowspec wires a sibling YAML under `expectations/`:
 
 ```yaml
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./claims_snapshots_dqe.yaml
 ```
 
-| Rule | Section | Constraint | What happens |
-|------|---------|------------|--------------|
-| `incurred_gte_paid` | `expect_or_drop` | `incurred_amount >= paid_to_date` | Bad rows are **dropped** |
-| `reported_on_or_after_loss` | `expect` | `reported_date >= date_of_loss` | Row is **kept**; failure is flagged in DQ metrics |
+| Layer / table | Expectations file | Hard drops (`expect_or_drop`) | Soft metrics (`expect`) |
+|---------------|-------------------|-------------------------------|-------------------------|
+| Bronze claims / premiums / cyclone / risk zones | `bronze/expectations/*_dqe.yaml` | Business keys non-empty | Required attrs non-empty |
+| Silver `claims_snapshots` | [`claims_snapshots_dqe.yaml`](src/dataflows/silver/expectations/claims_snapshots_dqe.yaml) | Keys, `date_of_loss`, `incurred >= paid` | Non-negative amounts, date order, status/peril enums |
+| Silver `policies` | [`policies_dqe.yaml`](src/dataflows/silver/expectations/policies_dqe.yaml) | `policy_id` | Positive amounts, term dates, band/building enums |
+| Silver `cyclone_events` | [`cyclone_events_dqe.yaml`](src/dataflows/silver/expectations/cyclone_events_dqe.yaml) | `event_id` | `start_date <= end_date`, dates present |
+| Silver `risk_zones` | [`risk_zones_dqe.yaml`](src/dataflows/silver/expectations/risk_zones_dqe.yaml) | `postcode` | Band present + allowed values |
 
-Both are tagged `Validity`. Only claims snapshots use DQE in this sample.
+Soft rules intentionally flag known fixture edge cases (e.g. cyclone bad dates, risk-zone `HIGH` / empty postcode) in the Pipeline Event Log expectation charts without failing the update.
 
 ### Walkthrough: `claims_current.sql`
 
@@ -451,51 +456,91 @@ Compared with bronze:
 
 ## Gold layer — actuarial marts
 
-**What you’re learning:** gold answers business questions with SQL materialized views over silver. One dataflowspec registers all three marts.
+**What you’re learning:** gold answers business questions with SQL materialized views over silver (gold serving for dashboards). One dataflowspec registers the consumption-ready marts.
 
 Open [`src/dataflows/gold/dataflowspec/gold_marts_main.yaml`](src/dataflows/gold/dataflowspec/gold_marts_main.yaml):
 
 - `dataFlowGroup: claims_gold`
 - `dataFlowType: materialized_view`
-- Under `materializedViews`, each key becomes a table name; `sqlPath` points at SQL under [`src/dataflows/gold/dml/`](src/dataflows/gold/dml/); `database: '{gold_schema}'` publishes into `actuarial_lff.gold`
+- Under `materializedViews`, each key becomes a table name; `sqlPath` points at SQL under [`src/dataflows/gold/dml/`](src/dataflows/gold/dml/); `database: '{gold_schema}'` publishes into `actuarial.sample`
 
 | Mart | What it answers | Main inputs |
 |------|-----------------|-------------|
-| `event_loss_summary` | Claim counts and losses **by cyclone event** | `claims_current` ⋈ `cyclone_events` |
-| `policy_loss_ratio` | Premium vs incurred by **insurer / wind risk / building type** | `policies` + claim rollups |
+| `event_loss_summary` | Cat vs non-cat losses by **event / region / peril** | `claims_current` ⋈ `cyclone_events` ⋈ `policies` |
+| `policy_loss_ratio` | Premium vs incurred by **insurer / region / band / building / mitigation** | `policies` + claim rollups |
 | `risk_band_performance` | Claim frequency and loss ratio by **wind risk / region** | same, different grouping |
+| `claims_summary` | Frequency, severity, settlement by **peril / status / risk dims** | `claims_current` ⋈ `policies` |
+| `claims_development` | Reporting lag and reserve by **loss / reported month** | `claims_current` ⋈ `policies` |
+| `portfolio_exposure` | Sum insured and premium rate by underwriting dims | `policies` |
+| `medallion_inventory` | Row counts and ingest freshness across layers | bronze + silver + gold tables |
 
-**Why `{silver_schema}.claims_current` instead of `live.*`?** Gold runs as a separate pipeline from silver. Cross-pipeline reads use fully qualified names (tokens resolve to e.g. `actuarial_lff.silver.claims_current`).
+**Why `{silver_schema}.claims_current` instead of `live.*`?** Gold runs as a separate pipeline from silver. Cross-pipeline reads use fully qualified names (tokens resolve to e.g. `actuarial.sample.claims_current`).
 
 Unlike bronze, there is no Auto Loader path, `selectExp`, or SCD block here—just “run this SQL → refresh this MV.”
 
-### Walkthrough: the three gold SQL files
+### Walkthrough: gold SQL files
 
-**1. [`event_loss_summary.sql`](src/dataflows/gold/dml/event_loss_summary.sql)** — losses by cyclone
+**1. [`event_loss_summary.sql`](src/dataflows/gold/dml/event_loss_summary.sql)** — cat vs non-cat losses
 
-- `INNER JOIN` `{silver_schema}.claims_current` to `{silver_schema}.cyclone_events` on `event_id` (only claims tied to a known event).
-- Grain: one row per event.
-- Metrics: distinct claim count, total incurred/paid, Open / Closed / Reopened counts.
-- Uses `claims_current` so each claim counts once (not every historical snapshot).
+- `LEFT JOIN` events and policies so non-cat claims still appear (`claim_category`).
+- Grain: category × event × region × peril.
+- Metrics: claim count, incurred/paid, severity, outstanding reserve, Open / Closed / Reopened counts.
 
 **2. [`policy_loss_ratio.sql`](src/dataflows/gold/dml/policy_loss_ratio.sql)** — premium vs loss by segment
 
 - CTE `claims_by_policy` rolls current claims up to `policy_id`.
 - `LEFT JOIN` from `{silver_schema}.policies` so policies with no claims still appear (`COALESCE` → zeros).
-- Grain: `insurer_name` × `wind_risk_band` × `building_type`.
-- Key KPI: `loss_ratio = total_incurred / total_premium` (null if premium is 0).
+- Grain: `insurer_name` × `region_name` × `wind_risk_band` × `building_type` × `mitigation_flag`.
+- Key KPIs: `loss_ratio` and `loss_ratio_pct`.
 
 **3. [`risk_band_performance.sql`](src/dataflows/gold/dml/risk_band_performance.sql)** — performance by risk geography
 
 - Same CTE + left-join-from-policies pattern.
 - Grain: `wind_risk_band` × `region_name`.
-- KPIs: `claim_frequency = claim_count / policy_count`, plus the same `loss_ratio`.
+- KPIs: `claim_frequency = claim_count / policy_count`, plus `loss_ratio`.
+
+**4–7.** `claims_summary`, `claims_development`, `portfolio_exposure`, and `medallion_inventory` power the Lakeview dashboards (operations, development, exposure, and pipeline monitoring).
 
 ```text
-silver.claims_current ──┬──► event_loss_summary  (+ cyclone_events)
+silver.claims_current ──┬──► event_loss_summary  (+ cyclone_events, policies)
+                        ├──► claims_summary / claims_development
                         │
-silver.policies ────────┴──► policy_loss_ratio
-                             risk_band_performance
+silver.policies ────────┴──► policy_loss_ratio / risk_band_performance / portfolio_exposure
+bronze + silver + gold ────► medallion_inventory
+```
+
+---
+
+## AI/BI Lakeview dashboards
+
+Deployed as bundle resources against SQL warehouse `${var.warehouse_id}` (Serverless Starter Warehouse).
+
+Dashboard SQL uses **unqualified** table names. Each dashboard resource sets `dataset_catalog: ${var.catalog}` and `dataset_schema: ${var.gold_schema}`, so deploy resolves to `actuarial.sample` (or env-specific gold schema). Business and monitoring dashboards read **gold serving tables** only—aligned with Lakeflow Framework gold-serving practice.
+
+| Dashboard resource | Audience | Sources |
+|--------------------|----------|---------|
+| `catastrophe_events` | Cat / reinsurance | `event_loss_summary` |
+| `underwriting_portfolio` | Underwriting | `policy_loss_ratio`, `risk_band_performance`, `portfolio_exposure` |
+| `claims_operations` | Claims ops | `claims_summary` |
+| `claims_development` | Actuarial | `claims_development` |
+| `pipeline_monitoring` | Data eng | `medallion_inventory` |
+| `pipeline_event_log` | Data eng / platform ops | `claims_lff_bronze_event_log`, `claims_lff_silver_event_log`, `claims_lff_gold_event_log` |
+
+Bronze, silver, and gold pipelines each publish an event log into the gold schema (do not delete those tables). Refresh the pipelines after deploy so the tables are populated before opening the event log dashboard.
+
+Definitions: `resources/*.dashboard.yml` + `src/dashboards/*.lvdash.json`.
+
+```bash
+databricks bundle deploy -t dev
+databricks bundle open catastrophe_events --target dev
+databricks bundle open underwriting_portfolio --target dev
+databricks bundle open claims_operations --target dev
+databricks bundle open claims_development --target dev
+databricks bundle open pipeline_monitoring --target dev
+databricks bundle open pipeline_event_log --target dev
+
+# After editing a dashboard in the UI, sync JSON back into the repo:
+databricks bundle generate dashboard --resource underwriting_portfolio --force
 ```
 
 ---
@@ -511,12 +556,16 @@ claims_pipeline_lakeflowframework_sample/
 │   ├── claims_bronze_pipeline.yml # Serverless bronze pipeline
 │   ├── claims_silver_pipeline.yml
 │   ├── claims_gold_pipeline.yml
-│   └── claims_pipeline_job.job.yml
+│   ├── claims_pipeline_job.job.yml
+│   └── *.dashboard.yml            # AI/BI Lakeview dashboards
+├── tests/
+│   └── test_bundle_config.py
 └── src/
     ├── notebooks/                 # Create schemas + land CSVs
     ├── pipeline_configs/          # Spec format + {token} substitutions
+    ├── dashboards/                # AI/BI Lakeview .lvdash.json
     └── dataflows/
-        ├── bronze/{dataflowspec,schemas}/
+        ├── bronze/{dataflowspec,schemas,expectations}/
         ├── silver/{dataflowspec,schemas,expectations,dml}/
         └── gold/{dataflowspec,dml}/
 ```
@@ -536,9 +585,9 @@ claims_pipeline_lakeflowframework_sample/
 
 | Layer | Schema | Tables |
 |-------|--------|--------|
-| Bronze | `actuarial_lff.bronze` | `claims_bordereau`, `premium_bordereau`, `risk_zone_lookup`, `cyclone_events` |
-| Silver | `actuarial_lff.silver` | `claims_snapshots`, `claims_current`, `policies`, `risk_zones`, `cyclone_events` |
-| Gold | `actuarial_lff.gold` | `event_loss_summary`, `policy_loss_ratio`, `risk_band_performance` |
+| Bronze | `actuarial.sample` | `claims_bordereau`, `premium_bordereau`, `risk_zone_lookup`, `bronze_cyclone_events` |
+| Silver | `actuarial.sample` | `claims_snapshots`, `claims_current`, `policies`, `risk_zones`, `cyclone_events` |
+| Gold | `actuarial.sample` | `event_loss_summary`, `policy_loss_ratio`, `risk_band_performance`, `claims_summary`, `claims_development`, `portfolio_exposure`, `medallion_inventory` |
 
 ---
 
@@ -547,7 +596,7 @@ claims_pipeline_lakeflowframework_sample/
 Before you run anything, watch for these (they catch most first-time failures):
 
 1. **Framework not deployed** — pipeline library path 404s. Deploy `lakeflow_framework` first.
-2. **Catalog/schema missing at deploy** — the landing volume resource needs `actuarial_lff.bronze` to exist **before** `bundle deploy` of this sample.
+2. **Catalog/schema missing at deploy** — the landing volume resource needs `actuarial.sample` to exist **before** `bundle deploy` of this sample.
 3. **Wrong `dataFlowGroupFilter`** — specs are silently skipped. Group names must match (`claims_bronze` / `claims_silver` / `claims_gold`).
 4. **`live.` vs FQN** — use `live.` only for tables in the **same** pipeline; gold reads silver via `{silver_schema}.…`.
 5. **File vs target schema** — Auto Loader’s file schema must not require `_ingest_ts` / `_source_file` from the CSV.
@@ -557,7 +606,7 @@ Before you run anything, watch for these (they catch most first-time failures):
 ## Prerequisites
 
 1. Databricks CLI authenticated to `https://adb-7405611775215693.13.azuredatabricks.net`.
-2. Unity Catalog rights to create catalog `actuarial_lff` (or have an admin create it) with schemas `bronze`, `silver`, `gold`, and grants for `CREATE_TABLE` / `CREATE_MATERIALIZED_VIEW` / `CREATE_VOLUME`.
+2. Unity Catalog rights to create catalog `actuarial` (or have an admin create it) with schema `sample`, and grants for `CREATE_TABLE` / `CREATE_MATERIALIZED_VIEW` / `CREATE_VOLUME`.
 3. All-purpose cluster `0730-111218-jwuz715u` startable for setup/land notebook tasks.
 4. Ability to deploy the separate `lakeflow_framework` bundle (pipelines attach its `dlt_pipeline` notebook).
 
@@ -583,13 +632,11 @@ Default path (dev):
 
 ### Step 2 — Bootstrap catalog / schemas (before this sample’s deploy)
 
-The landing **volume** resource needs `actuarial_lff.bronze` to exist when you deploy this bundle. Create catalog/schemas once if needed:
+The landing **volume** resource needs `actuarial.sample` to exist when you deploy this bundle. Create catalog/schema once if needed:
 
 ```sql
-CREATE CATALOG IF NOT EXISTS actuarial_lff;
-CREATE SCHEMA IF NOT EXISTS actuarial_lff.bronze;
-CREATE SCHEMA IF NOT EXISTS actuarial_lff.silver;
-CREATE SCHEMA IF NOT EXISTS actuarial_lff.gold;
+CREATE CATALOG IF NOT EXISTS actuarial;
+CREATE SCHEMA IF NOT EXISTS actuarial.sample;
 ```
 
 (The job’s `create_schemas_and_tables` notebook also ensures these—and the volume—exist at **run** time, but `bundle deploy` still needs the schema for the volume resource.)
@@ -653,27 +700,49 @@ Use the checks in the next section.
 | Check | Expected |
 |-------|----------|
 | Bronze / silver claim snapshots | ~2,829 |
-| `actuarial_lff.silver.claims_current` | ~1,533 unique claims |
-| `actuarial_lff.silver.policies` | 5,000 |
-| `actuarial_lff.silver.risk_zones` | 19 (one postcode deduped) |
-| `actuarial_lff.silver.cyclone_events` | 6 |
-| `actuarial_lff.gold.event_loss_summary` | 6 |
+| `actuarial.sample.claims_current` | ~1,533 unique claims |
+| `actuarial.sample.policies` | 5,000 |
+| `actuarial.sample.risk_zones` | 19 (one postcode deduped) |
+| `actuarial.sample.cyclone_events` | 6 |
+| `actuarial.sample.event_loss_summary` | > 6 (category × event × region × peril) |
+| Other gold marts | Non-empty after gold pipeline refresh |
 
 ```sql
-SELECT 'bronze_claims' AS t, COUNT(*) AS n FROM actuarial_lff.bronze.claims_bordereau
-UNION ALL SELECT 'silver_snapshots', COUNT(*) FROM actuarial_lff.silver.claims_snapshots
-UNION ALL SELECT 'silver_current', COUNT(*) FROM actuarial_lff.silver.claims_current
-UNION ALL SELECT 'silver_policies', COUNT(*) FROM actuarial_lff.silver.policies
-UNION ALL SELECT 'gold_event_loss', COUNT(*) FROM actuarial_lff.gold.event_loss_summary;
+SELECT 'bronze_claims' AS t, COUNT(*) AS n FROM actuarial.sample.claims_bordereau
+UNION ALL SELECT 'silver_snapshots', COUNT(*) FROM actuarial.sample.claims_snapshots
+UNION ALL SELECT 'silver_current', COUNT(*) FROM actuarial.sample.claims_current
+UNION ALL SELECT 'silver_policies', COUNT(*) FROM actuarial.sample.policies
+UNION ALL SELECT 'gold_event_loss', COUNT(*) FROM actuarial.sample.event_loss_summary
+UNION ALL SELECT 'gold_claims_summary', COUNT(*) FROM actuarial.sample.claims_summary
+UNION ALL SELECT 'gold_inventory', COUNT(*) FROM actuarial.sample.medallion_inventory;
 
-SELECT * FROM actuarial_lff.gold.event_loss_summary ORDER BY total_incurred DESC;
+SELECT * FROM actuarial.sample.event_loss_summary ORDER BY total_incurred DESC;
+SELECT * FROM actuarial.sample.medallion_inventory ORDER BY layer, table_name;
 ```
 
 Landing files (optional sanity check):
 
 ```sql
-LIST '/Volumes/actuarial_lff/bronze/landing/claims';
+LIST '/Volumes/actuarial/sample/landing/claims';
 ```
+
+---
+
+## CI / GitHub Actions
+
+Workflow: [`.github/workflows/claims-pipeline-lakeflowframework-sample.yml`](../.github/workflows/claims-pipeline-lakeflowframework-sample.yml).
+
+Trigger manually: **Actions → “Claims pipeline Lakeflow Framework sample” → Run workflow**.
+
+Requires repo secrets `DATABRICKS_HOST` and `DATABRICKS_TOKEN`.
+
+| Job | What it does |
+|-----|----------------|
+| **test** | `pytest tests/` (bundle config + dashboard invariants; needs `pytest` + `pyyaml`) |
+| **validate** | `databricks bundle validate --target prod` (pipelines, job, volume, and all `*.dashboard.yml`) |
+| **deploy_and_run** | Deploy `lakeflow_framework` (`dev`), then this sample (`prod`) — Lakeview dashboards publish with the sample deploy via `include: resources/*.yml` — then `databricks bundle run claims_pipeline_job --target prod` so gold marts and event logs exist for those dashboards |
+
+There is no separate dashboard deploy step; `bundle deploy` publishes all six Lakeview dashboards.
 
 ---
 

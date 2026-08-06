@@ -29,3 +29,6 @@ targetDetails:
   tableProperties:
     delta.enableChangeDataFeed: 'true'
   schemaPath: risk_zone_lookup_schema.json
+
+dataQualityExpectationsEnabled: true
+dataQualityExpectationsPath: ./risk_zone_lookup_dqe.yaml

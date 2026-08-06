@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    underwriting_portfolio:
+      display_name: "Underwriting Portfolio Performance"
+      file_path: ../src/dashboards/underwriting_portfolio.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${resources.schemas.actuarial_streaming.name}

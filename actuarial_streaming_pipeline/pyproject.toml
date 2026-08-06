@@ -39,3 +39,7 @@ extend-exclude = ["src/notebooks"]
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
 testpaths = ["tests"]
+filterwarnings = [
+    # PySpark 15.4 still uses distutils.version.LooseVersion for dependency checks.
+    "ignore:distutils Version classes are deprecated:DeprecationWarning:pyspark",
+]

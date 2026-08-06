@@ -1,0 +1,74 @@
+# End-to-end ML job: setup → land → features → train/register → batch score.
+
+resources:
+  jobs:
+    ml_pipeline_job:
+      name: ml_pipeline_job
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        # Use deployed schema name (dev mode prefixes e.g. dev_databricks_np_ml).
+        - name: schema
+          default: ${resources.schemas.actuarial_ml.name}
+        - name: landing_path
+          default: /Volumes/${var.catalog}/${resources.schemas.actuarial_ml.name}/landing
+        - name: source_path
+          default: ${workspace.file_path}/fixtures/sample-data
+        - name: project_src
+          default: ${workspace.file_path}/src
+
+      tasks:
+        - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/00_setup.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+
+        - task_key: land_sample_data
+          depends_on:
+            - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/01_land_sample_data.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              landing_path: "{{job.parameters.landing_path}}"
+              source_path: "{{job.parameters.source_path}}"
+
+        - task_key: build_features
+          depends_on:
+            - task_key: land_sample_data
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../src/02_build_features.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              landing_path: "{{job.parameters.landing_path}}"
+              source_path: "{{job.parameters.source_path}}"
+              project_src: "{{job.parameters.project_src}}"
+
+        - task_key: train_and_evaluate
+          depends_on:
+            - task_key: build_features
+          existing_cluster_id: ${var.ml_cluster_id}
+          notebook_task:
+            notebook_path: ../src/03_train_and_evaluate.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              project_src: "{{job.parameters.project_src}}"
+
+        - task_key: batch_score
+          depends_on:
+            - task_key: train_and_evaluate
+          existing_cluster_id: ${var.ml_cluster_id}
+          notebook_task:
+            notebook_path: ../src/04_batch_score.ipynb
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              project_src: "{{job.parameters.project_src}}"

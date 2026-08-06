@@ -1,0 +1,50 @@
+# Early claim severity ML demo — land → features → train → register → batch score.
+# See docs/TRAINING_GUIDE.md for the trainer walkthrough.
+bundle:
+  name: ml-pipeline-demo
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog (actuarial)
+  schema:
+    description: UC schema for ML volume, feature tables, model, and predictions
+    default: ml
+  cluster_id:
+    description: Existing all-purpose cluster ID from deploy-databricks-azure (Shared / USER_ISOLATION) for setup, land, and features
+  ml_cluster_id:
+    description: Dedicated ML Runtime cluster ID (create in UI; required for train / register / score)
+  landing_volume_path:
+    description: "Deprecated for job params — job uses /Volumes/{catalog}/{deployed_schema}/landing. Kept for docs compatibility."
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+    variables:
+      catalog: actuarial
+      schema: ml
+      cluster_id: 0730-111218-jwuz715u
+      # Dedicated ML Runtime single-node cluster (SINGLE_USER / use_ml_runtime).
+      ml_cluster_id: 0806-142042-bp2x9pya
+      landing_volume_path: /Volumes/actuarial/ml/landing
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+      root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: actuarial
+      schema: ml
+      cluster_id: 0730-111218-jwuz715u
+      ml_cluster_id: 0806-142042-bp2x9pya
+      landing_volume_path: /Volumes/actuarial/ml/landing
+    permissions:
+      - user_name: databricks-np@saurabhuptut.onmicrosoft.com
+        level: CAN_MANAGE

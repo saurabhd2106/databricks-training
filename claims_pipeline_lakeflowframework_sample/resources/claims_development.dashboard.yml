@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    claims_development:
+      display_name: "Claims Development & Reporting Lag"
+      file_path: ../src/dashboards/claims_development.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.gold_schema}

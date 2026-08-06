@@ -25,8 +25,12 @@ mode: stream
 targetFormat: delta
 targetDetails:
   database: '{bronze_schema}'
-  table: cyclone_events
+  # Prefixed so bronze and silver can share actuarial.sample without colliding.
+  table: bronze_cyclone_events
   comment: Raw cyclone events CSV ingest.
   tableProperties:
     delta.enableChangeDataFeed: 'true'
   schemaPath: cyclone_events_schema.json
+
+dataQualityExpectationsEnabled: true
+dataQualityExpectationsPath: ./cyclone_events_dqe.yaml

@@ -1,0 +1,8 @@
+# Unity Catalog schema for ML demo tables, volume, and registered models.
+
+resources:
+  schemas:
+    actuarial_ml:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: Early claim severity ML demo (features, predictions, landing volume, UC models).

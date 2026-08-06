@@ -1,0 +1,11 @@
+expect_or_drop:
+  - name: postcode_not_null
+    constraint: postcode IS NOT NULL
+    tag: Completeness
+expect:
+  - name: wind_risk_band_not_null
+    constraint: wind_risk_band IS NOT NULL
+    tag: Completeness
+  - name: valid_wind_risk_band
+    constraint: wind_risk_band IN ('T-W', 'B-F', 'Q-S', 'L-P')
+    tag: Validity

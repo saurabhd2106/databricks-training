@@ -1,0 +1,108 @@
+# Test, validate, deploy, and run the ml-pipeline-demo Databricks Asset Bundle.
+# Deploys the job/schema/volume, then runs train → register → batch score.
+# Trigger manually via Actions → "ML pipeline demo" → Run workflow.
+# Requires repo secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
+# Ensure Shared (cluster_id) and Dedicated ML Runtime (ml_cluster_id) clusters
+# in databricks.yml are running before Run workflow, or the job will wait/fail.
+# See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
+
+name: ML pipeline demo
+
+concurrency:
+  group: ml-pipeline-demo-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Bundle target to deploy and run
+        required: true
+        type: choice
+        options:
+          - prod
+          - dev
+        default: prod
+      run_job:
+        description: After deploy, run ml_pipeline_job (train, register, score)
+        required: true
+        type: boolean
+        default: true
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+  BUNDLE_TARGET: ${{ inputs.target }}
+
+jobs:
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-pipeline-demo
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest -q
+
+  validate:
+    name: Validate bundle
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-pipeline-demo
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Validate
+        run: databricks bundle validate --target ${{ env.BUNDLE_TARGET }}
+
+  deploy:
+    name: Deploy bundle
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-pipeline-demo
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      - name: Deploy
+        run: databricks bundle deploy --target ${{ env.BUNDLE_TARGET }}
+
+  deploy_model:
+    name: Train, register, and score
+    needs: deploy
+    if: ${{ inputs.run_job }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-pipeline-demo
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@v1.10.0
+
+      # Runs setup → land → features → train/register → batch score.
+      # Registers UC model {catalog}.{schema}.ultimate_claim_severity
+      # and writes claim_severity_predictions.
+      - name: Run ml_pipeline_job
+        run: databricks bundle run ml_pipeline_job --target ${{ env.BUNDLE_TARGET }}

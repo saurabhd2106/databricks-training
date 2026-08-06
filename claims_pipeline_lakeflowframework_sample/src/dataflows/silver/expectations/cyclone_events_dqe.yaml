@@ -1,0 +1,11 @@
+expect_or_drop:
+  - name: event_id_not_null
+    constraint: event_id IS NOT NULL
+    tag: Completeness
+expect:
+  - name: start_on_or_before_end
+    constraint: start_date <= end_date
+    tag: Validity
+  - name: dates_not_null
+    constraint: start_date IS NOT NULL AND end_date IS NOT NULL
+    tag: Completeness

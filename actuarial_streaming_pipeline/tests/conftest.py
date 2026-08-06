@@ -22,6 +22,7 @@ def spark():
         if not (
             conf.serverless_compute_id
             or conf.cluster_id
+            or conf.host
             or os.environ.get("SPARK_REMOTE")
             or os.environ.get("DATABRICKS_HOST")
         ):

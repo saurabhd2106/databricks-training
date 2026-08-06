@@ -8,7 +8,7 @@ sourceType: delta
 sourceViewName: v_cyclone_events
 sourceDetails:
   database: '{bronze_schema}'
-  table: cyclone_events
+  table: bronze_cyclone_events
   cdfEnabled: true
   selectExp:
     - cast(event_id as string) as event_id
@@ -35,3 +35,6 @@ cdcSettings:
   ignore_null_updates: false
   except_column_list:
     - _ingest_ts
+
+dataQualityExpectationsEnabled: true
+dataQualityExpectationsPath: ./cyclone_events_dqe.yaml

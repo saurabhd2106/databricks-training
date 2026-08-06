@@ -100,9 +100,24 @@ def test_claims_current_keeps_latest_snapshot(spark):
         transform_typed_claims(
             spark.createDataFrame(
                 [
-                    claim_row(claim_id="CLM-1", snapshot_date="2025-01-01", incurred_amount="100"),
-                    claim_row(claim_id="CLM-1", snapshot_date="2025-02-01", incurred_amount="200"),
-                    claim_row(claim_id="CLM-2", snapshot_date="2025-01-15", incurred_amount="50"),
+                    claim_row(
+                        claim_id="CLM-1",
+                        snapshot_date="2025-01-01",
+                        incurred_amount="100",
+                        paid_to_date="50",
+                    ),
+                    claim_row(
+                        claim_id="CLM-1",
+                        snapshot_date="2025-02-01",
+                        incurred_amount="200",
+                        paid_to_date="50",
+                    ),
+                    claim_row(
+                        claim_id="CLM-2",
+                        snapshot_date="2025-01-15",
+                        incurred_amount="50",
+                        paid_to_date="10",
+                    ),
                 ],
                 schema=CLAIMS_SCHEMA,
             )

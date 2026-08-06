@@ -1,0 +1,1011 @@
+{
+  "datasets": [
+    {
+      "name": "update_runs",
+      "displayName": "Pipeline update runs",
+      "query": "WITH event_log_raw AS (\n  SELECT * FROM claims_lff_bronze_event_log\nUNION ALL\nSELECT * FROM claims_lff_silver_event_log\nUNION ALL\nSELECT * FROM claims_lff_gold_event_log\n),\nlast_status_per_update AS (\n  SELECT\n    origin.pipeline_id AS pipeline_id,\n    origin.pipeline_name AS pipeline_name,\n    origin.update_id AS pipeline_update_id,\n    FROM_JSON(details, 'struct<update_progress: struct<state: string>>').update_progress.state AS pipeline_update_status,\n    timestamp,\n    ROW_NUMBER() OVER (PARTITION BY origin.update_id ORDER BY timestamp DESC) AS rn\n  FROM event_log_raw\n  WHERE event_type = 'update_progress'\n  QUALIFY rn = 1\n),\nupdate_durations AS (\n  SELECT\n    origin.pipeline_id AS pipeline_id,\n    origin.pipeline_name AS pipeline_name,\n    origin.update_id AS pipeline_update_id,\n    MIN(CASE WHEN event_type = 'create_update' THEN timestamp END) AS start_time,\n    COALESCE(\n      MAX(CASE\n        WHEN event_type = 'update_progress'\n         AND FROM_JSON(details, 'struct<update_progress: struct<state: string>>').update_progress.state IN ('COMPLETED', 'FAILED', 'CANCELED')\n        THEN timestamp\n      END),\n      current_timestamp()\n    ) AS end_time\n  FROM event_log_raw\n  WHERE event_type IN ('create_update', 'update_progress')\n    AND origin.update_id IS NOT NULL\n  GROUP BY origin.pipeline_id, origin.pipeline_name, origin.update_id\n  HAVING start_time IS NOT NULL\n)\nSELECT\n  s.pipeline_id,\n  s.pipeline_name,\n  s.pipeline_update_id,\n  d.start_time,\n  d.end_time,\n  CASE\n    WHEN d.start_time IS NOT NULL AND d.end_time IS NOT NULL THEN\n      ROUND(TIMESTAMPDIFF(MILLISECOND, d.start_time, d.end_time) / 1000.0)\n    ELSE NULL\n  END AS duration_seconds,\n  s.pipeline_update_status\nFROM last_status_per_update s\nJOIN update_durations d\n  ON s.pipeline_id = d.pipeline_id AND s.pipeline_update_id = d.pipeline_update_id"
+    },
+    {
+      "name": "flow_metrics",
+      "displayName": "Flow progress metrics",
+      "query": "WITH event_log_raw AS (\n  SELECT * FROM claims_lff_bronze_event_log\nUNION ALL\nSELECT * FROM claims_lff_silver_event_log\nUNION ALL\nSELECT * FROM claims_lff_gold_event_log\n),\nflow_progress_raw AS (\n  SELECT\n    origin.pipeline_name AS pipeline_name,\n    origin.pipeline_id AS pipeline_id,\n    origin.flow_name AS table_name,\n    origin.update_id AS update_id,\n    timestamp,\n    CAST(details:flow_progress.status AS STRING) AS status,\n    TRY_CAST(details:flow_progress.metrics.num_output_rows AS BIGINT) AS num_output_rows,\n    TRY_CAST(details:flow_progress.data_quality.dropped_records AS BIGINT) AS num_expectation_dropped_rows\n  FROM event_log_raw\n  WHERE event_type = 'flow_progress'\n    AND origin.flow_name IS NOT NULL\n    AND origin.flow_name != 'pipelines.flowTimeMetrics.missingFlowName'\n)\nSELECT\n  pipeline_name,\n  pipeline_id,\n  update_id,\n  table_name,\n  MIN(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END) AS start_timestamp,\n  MAX(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END) AS end_timestamp,\n  MAX_BY(status, timestamp) FILTER (\n    WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED', 'EXCLUDED', 'SKIPPED', 'STOPPED', 'IDLE')\n  ) AS final_status,\n  SUM(COALESCE(num_output_rows, 0)) AS total_output_records,\n  MAX(COALESCE(num_expectation_dropped_rows, 0)) AS total_expectation_dropped_records,\n  CASE\n    WHEN MIN(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END) IS NOT NULL\n     AND MAX(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END) IS NOT NULL THEN\n      ROUND(TIMESTAMPDIFF(\n        MILLISECOND,\n        MIN(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END),\n        MAX(CASE WHEN status IN ('STARTING', 'RUNNING', 'COMPLETED') THEN timestamp END)\n      ) / 1000.0)\n    ELSE NULL\n  END AS duration_seconds\nFROM flow_progress_raw\nGROUP BY pipeline_name, pipeline_id, update_id, table_name"
+    },
+    {
+      "name": "expectation_metrics",
+      "displayName": "Expectation metrics",
+      "query": "WITH event_log_raw AS (\n  SELECT * FROM claims_lff_bronze_event_log\nUNION ALL\nSELECT * FROM claims_lff_silver_event_log\nUNION ALL\nSELECT * FROM claims_lff_gold_event_log\n),\nexpectations_parsed AS (\n  SELECT\n    origin.update_id AS update_id,\n    explode(\n      from_json(\n        CAST(details:flow_progress.data_quality.expectations AS STRING),\n        'array<struct<name: string, dataset: string, passed_records: int, failed_records: int>>'\n      )\n    ) AS row_expectations\n  FROM event_log_raw\n  WHERE event_type = 'flow_progress'\n    AND details:flow_progress.data_quality.expectations IS NOT NULL\n)\nSELECT\n  update_id,\n  row_expectations.dataset AS dataset,\n  row_expectations.name AS expectation,\n  SUM(row_expectations.passed_records) AS passing_records,\n  SUM(row_expectations.failed_records) AS failing_records\nFROM expectations_parsed\nGROUP BY update_id, row_expectations.dataset, row_expectations.name"
+    },
+    {
+      "name": "error_events",
+      "displayName": "Error and warning events",
+      "query": "SELECT\n  timestamp,\n  level,\n  event_type,\n  message,\n  origin.pipeline_name AS pipeline_name,\n  origin.update_id AS update_id,\n  origin.flow_name AS flow_name\nFROM (\n  SELECT * FROM claims_lff_bronze_event_log\n  UNION ALL\n  SELECT * FROM claims_lff_silver_event_log\n  UNION ALL\n  SELECT * FROM claims_lff_gold_event_log\n) event_log_raw\nWHERE level IN ('ERROR', 'WARN')"
+    }
+  ],
+  "pages": [
+    {
+      "name": "main",
+      "displayName": "Pipeline Event Log",
+      "layout": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# Pipeline Event Log\nRuns, flow throughput, expectation quality, and errors from published Lakeflow event logs (`claims_lff_bronze_event_log`, `claims_lff_silver_event_log`, `claims_lff_gold_event_log`)."
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          },
+          "widget": {
+            "name": "filter_status",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "update_runs",
+                  "fields": [
+                    {
+                      "name": "pipeline_update_status",
+                      "expression": "`pipeline_update_status`"
+                    },
+                    {
+                      "name": "pipeline_update_status_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "pipeline_update_status",
+                    "displayName": "Update status",
+                    "queryName": "filter_q"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Update status"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          },
+          "widget": {
+            "name": "filter_flow",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "flow_metrics",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "table_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "table_name",
+                    "displayName": "Flow",
+                    "queryName": "filter_q"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Flow / table"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          },
+          "widget": {
+            "name": "filter_level",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "error_events",
+                  "fields": [
+                    {
+                      "name": "level",
+                      "expression": "`level`"
+                    },
+                    {
+                      "name": "level_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "level",
+                    "displayName": "Level",
+                    "queryName": "filter_q"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Event level"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "kpi_update_count",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "update_runs",
+                  "fields": [
+                    {
+                      "name": "update_count",
+                      "expression": "COUNT(DISTINCT `pipeline_update_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "update_count",
+                  "displayName": "Updates"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Pipeline updates"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "kpi_failed_updates",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "update_runs",
+                  "fields": [
+                    {
+                      "name": "failed_updates",
+                      "expression": "COUNT(DISTINCT CASE WHEN `pipeline_update_status` = 'FAILED' THEN `pipeline_update_id` END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "failed_updates",
+                  "displayName": "Failed"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Failed updates"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "kpi_expectation_failures",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "expectation_metrics",
+                  "fields": [
+                    {
+                      "name": "failing_records",
+                      "expression": "COALESCE(SUM(`failing_records`), 0)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "failing_records",
+                  "displayName": "Failed records"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Expectation failures"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 2,
+            "height": 2
+          },
+          "widget": {
+            "name": "kpi_error_warn",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "error_events",
+                  "fields": [
+                    {
+                      "name": "event_count",
+                      "expression": "COUNT(*)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "event_count",
+                  "displayName": "Events"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Errors & warnings"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 2,
+            "y": 4,
+            "width": 4,
+            "height": 4
+          },
+          "widget": {
+            "name": "bar_update_duration",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "update_runs",
+                  "fields": [
+                    {
+                      "name": "pipeline_update_id",
+                      "expression": "`pipeline_update_id`"
+                    },
+                    {
+                      "name": "duration_seconds",
+                      "expression": "SUM(`duration_seconds`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "duration_seconds",
+                  "displayName": "Duration (s)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "pipeline_update_id",
+                  "displayName": "Update ID",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Update duration by update ID"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 2,
+            "height": 4
+          },
+          "widget": {
+            "name": "pie_event_level",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "error_events",
+                  "fields": [
+                    {
+                      "name": "level",
+                      "expression": "`level`"
+                    },
+                    {
+                      "name": "events",
+                      "expression": "COUNT(*)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "events",
+                  "displayName": "Events"
+                },
+                "color": {
+                  "fieldName": "level",
+                  "displayName": "Level",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Errors vs warnings"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 3,
+            "height": 4
+          },
+          "widget": {
+            "name": "bar_output_by_flow",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "flow_metrics",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "total_output_records",
+                      "expression": "SUM(`total_output_records`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "total_output_records",
+                  "displayName": "Output rows",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "table_name",
+                  "displayName": "Flow",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Output rows by flow"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 10,
+            "width": 3,
+            "height": 4
+          },
+          "widget": {
+            "name": "bar_expectation_failed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "expectation_metrics",
+                  "fields": [
+                    {
+                      "name": "expectation",
+                      "expression": "`expectation`"
+                    },
+                    {
+                      "name": "failing_records",
+                      "expression": "SUM(`failing_records`)"
+                    },
+                    {
+                      "name": "passing_records",
+                      "expression": "SUM(`passing_records`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "failing_records",
+                  "displayName": "Failed",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "expectation",
+                  "displayName": "Expectation",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Failed records by expectation"
+              }
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 6,
+            "height": 4
+          },
+          "widget": {
+            "name": "table_update_runs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "update_runs",
+                  "fields": [
+                    {
+                      "name": "pipeline_update_id",
+                      "expression": "`pipeline_update_id`"
+                    },
+                    {
+                      "name": "pipeline_update_status",
+                      "expression": "`pipeline_update_status`"
+                    },
+                    {
+                      "name": "start_time",
+                      "expression": "`start_time`"
+                    },
+                    {
+                      "name": "end_time",
+                      "expression": "`end_time`"
+                    },
+                    {
+                      "name": "duration_seconds",
+                      "expression": "`duration_seconds`"
+                    },
+                    {
+                      "name": "pipeline_name",
+                      "expression": "`pipeline_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "pipeline_update_status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1,
+                    "title": "Status",
+                    "displayName": "Status"
+                  },
+                  {
+                    "fieldName": "start_time",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2,
+                    "title": "Start",
+                    "displayName": "Start"
+                  },
+                  {
+                    "fieldName": "end_time",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 3,
+                    "title": "End",
+                    "displayName": "End"
+                  },
+                  {
+                    "fieldName": "duration_seconds",
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4,
+                    "title": "Duration (s)",
+                    "displayName": "Duration (s)",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "pipeline_update_id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 5,
+                    "title": "Update ID",
+                    "displayName": "Update ID"
+                  },
+                  {
+                    "fieldName": "pipeline_name",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 6,
+                    "title": "Pipeline",
+                    "displayName": "Pipeline"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Update run history"
+              },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 6,
+            "height": 4
+          },
+          "widget": {
+            "name": "table_flow_metrics",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "flow_metrics",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "final_status",
+                      "expression": "`final_status`"
+                    },
+                    {
+                      "name": "total_output_records",
+                      "expression": "`total_output_records`"
+                    },
+                    {
+                      "name": "total_expectation_dropped_records",
+                      "expression": "`total_expectation_dropped_records`"
+                    },
+                    {
+                      "name": "duration_seconds",
+                      "expression": "`duration_seconds`"
+                    },
+                    {
+                      "name": "update_id",
+                      "expression": "`update_id`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_name",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1,
+                    "title": "Flow",
+                    "displayName": "Flow"
+                  },
+                  {
+                    "fieldName": "final_status",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2,
+                    "title": "Status",
+                    "displayName": "Status"
+                  },
+                  {
+                    "fieldName": "total_output_records",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3,
+                    "title": "Output rows",
+                    "displayName": "Output rows",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "total_expectation_dropped_records",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4,
+                    "title": "Dropped",
+                    "displayName": "Dropped",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "duration_seconds",
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 5,
+                    "title": "Duration (s)",
+                    "displayName": "Duration (s)",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "update_id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 6,
+                    "title": "Update ID",
+                    "displayName": "Update ID"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Flow metrics"
+              },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 3,
+            "height": 4
+          },
+          "widget": {
+            "name": "table_expectations",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "expectation_metrics",
+                  "fields": [
+                    {
+                      "name": "dataset",
+                      "expression": "`dataset`"
+                    },
+                    {
+                      "name": "expectation",
+                      "expression": "`expectation`"
+                    },
+                    {
+                      "name": "passing_records",
+                      "expression": "`passing_records`"
+                    },
+                    {
+                      "name": "failing_records",
+                      "expression": "`failing_records`"
+                    },
+                    {
+                      "name": "update_id",
+                      "expression": "`update_id`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "dataset",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1,
+                    "title": "Dataset",
+                    "displayName": "Dataset"
+                  },
+                  {
+                    "fieldName": "expectation",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2,
+                    "title": "Expectation",
+                    "displayName": "Expectation"
+                  },
+                  {
+                    "fieldName": "passing_records",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 3,
+                    "title": "Passed",
+                    "displayName": "Passed",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "failing_records",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 4,
+                    "title": "Failed",
+                    "displayName": "Failed",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "update_id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 5,
+                    "title": "Update ID",
+                    "displayName": "Update ID"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Expectation breakdown"
+              },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 22,
+            "width": 3,
+            "height": 4
+          },
+          "widget": {
+            "name": "table_errors",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "error_events",
+                  "fields": [
+                    {
+                      "name": "timestamp",
+                      "expression": "`timestamp`"
+                    },
+                    {
+                      "name": "level",
+                      "expression": "`level`"
+                    },
+                    {
+                      "name": "event_type",
+                      "expression": "`event_type`"
+                    },
+                    {
+                      "name": "message",
+                      "expression": "`message`"
+                    },
+                    {
+                      "name": "flow_name",
+                      "expression": "`flow_name`"
+                    },
+                    {
+                      "name": "update_id",
+                      "expression": "`update_id`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "timestamp",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 1,
+                    "title": "Timestamp",
+                    "displayName": "Timestamp"
+                  },
+                  {
+                    "fieldName": "level",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2,
+                    "title": "Level",
+                    "displayName": "Level"
+                  },
+                  {
+                    "fieldName": "event_type",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 3,
+                    "title": "Event type",
+                    "displayName": "Event type"
+                  },
+                  {
+                    "fieldName": "message",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 4,
+                    "title": "Message",
+                    "displayName": "Message"
+                  },
+                  {
+                    "fieldName": "flow_name",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 5,
+                    "title": "Flow",
+                    "displayName": "Flow"
+                  },
+                  {
+                    "fieldName": "update_id",
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 6,
+                    "title": "Update ID",
+                    "displayName": "Update ID"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Recent errors & warnings"
+              },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

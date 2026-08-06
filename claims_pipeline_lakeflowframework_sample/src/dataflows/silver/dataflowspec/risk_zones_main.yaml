@@ -34,3 +34,6 @@ cdcSettings:
   ignore_null_updates: false
   except_column_list:
     - _ingest_ts
+
+dataQualityExpectationsEnabled: true
+dataQualityExpectationsPath: ./risk_zones_dqe.yaml

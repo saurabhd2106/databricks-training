@@ -9,8 +9,10 @@ WITH claims_by_policy AS (
 )
 SELECT
   p.insurer_name,
+  p.region_name,
   p.wind_risk_band,
   p.building_type,
+  p.mitigation_flag,
   COUNT(DISTINCT p.policy_id) AS policy_count,
   SUM(p.annual_premium) AS total_premium,
   COALESCE(SUM(c.claim_count), 0) AS claim_count,
@@ -20,11 +22,18 @@ SELECT
     WHEN SUM(p.annual_premium) > 0
     THEN COALESCE(SUM(c.total_incurred), 0) / SUM(p.annual_premium)
     ELSE CAST(NULL AS DOUBLE)
-  END AS loss_ratio
+  END AS loss_ratio,
+  CASE
+    WHEN SUM(p.annual_premium) > 0
+    THEN ROUND(COALESCE(SUM(c.total_incurred), 0) / SUM(p.annual_premium) * 100, 2)
+    ELSE CAST(NULL AS DOUBLE)
+  END AS loss_ratio_pct
 FROM {silver_schema}.policies p
 LEFT JOIN claims_by_policy c
   ON p.policy_id = c.policy_id
 GROUP BY
   p.insurer_name,
+  p.region_name,
   p.wind_risk_band,
-  p.building_type
+  p.building_type,
+  p.mitigation_flag

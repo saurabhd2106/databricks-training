@@ -8,17 +8,17 @@ include:
 
 variables:
   catalog:
-    description: Unity Catalog for this LFF sample (separate from actuarial)
+    description: Unity Catalog catalog (actuarial)
   framework_source_path:
     description: Workspace path to the deployed lakeflow_framework src/ folder
   workspace_host:
     description: Workspace URL used for Framework API calls
   bronze_schema:
-    description: UC schema name for the bronze layer (under catalog)
+    description: UC schema for bronze tables (shared sample schema under catalog)
   silver_schema:
-    description: UC schema name for the silver layer (under catalog)
+    description: UC schema for silver tables (shared sample schema under catalog)
   gold_schema:
-    description: UC schema name for the gold layer (under catalog)
+    description: UC schema for gold tables and dashboards (shared sample schema)
   cluster_id:
     description: Existing all-purpose cluster ID for land / setup notebooks
   landing_volume_path:
@@ -26,6 +26,8 @@ variables:
   logical_env:
     description: Optional logical environment suffix for substitutions
     default: ""
+  warehouse_id:
+    description: SQL warehouse ID for AI/BI Lakeview dashboards
 
 targets:
   dev:
@@ -34,14 +36,15 @@ targets:
     workspace:
       host: https://adb-7405611775215693.13.azuredatabricks.net
     variables:
-      catalog: actuarial_lff
-      bronze_schema: bronze
-      silver_schema: silver
-      gold_schema: gold
+      catalog: actuarial
+      bronze_schema: sample
+      silver_schema: sample
+      gold_schema: sample
       cluster_id: 0730-111218-jwuz715u
-      landing_volume_path: /Volumes/actuarial_lff/bronze/landing
+      landing_volume_path: /Volumes/actuarial/sample/landing
       workspace_host: https://adb-7405611775215693.13.azuredatabricks.net
       framework_source_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/lakeflow_framework/dev/current/files/src
+      warehouse_id: 66d7b615b6cff38c
     presets:
       artifacts_dynamic_version: true
   prod:
@@ -50,14 +53,15 @@ targets:
       host: https://adb-7405611775215693.13.azuredatabricks.net
       root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
     variables:
-      catalog: actuarial_lff
-      bronze_schema: bronze
-      silver_schema: silver
-      gold_schema: gold
+      catalog: actuarial
+      bronze_schema: sample
+      silver_schema: sample
+      gold_schema: sample
       cluster_id: 0730-111218-jwuz715u
-      landing_volume_path: /Volumes/actuarial_lff/bronze/landing
+      landing_volume_path: /Volumes/actuarial/sample/landing
       workspace_host: https://adb-7405611775215693.13.azuredatabricks.net
       framework_source_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/lakeflow_framework/dev/current/files/src
+      warehouse_id: 66d7b615b6cff38c
     permissions:
       - user_name: databricks-np@saurabhuptut.onmicrosoft.com
         level: CAN_MANAGE

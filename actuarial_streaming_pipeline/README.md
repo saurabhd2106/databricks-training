@@ -105,3 +105,9 @@ fixtures/sample-data
    ```bash
    uv run pytest
    ```
+
+   Spark-backed tests (`test_quarantine.py`, `test_silver.py`) need Databricks Connect
+   plus auth via a CLI profile (`databricks auth login` / `~/.databrickscfg`) or
+   `DATABRICKS_HOST` + `DATABRICKS_TOKEN`. Without compute configured they fall back to
+   serverless (`DATABRICKS_SERVERLESS_COMPUTE_ID=auto`). If Connect or auth is missing,
+   those tests skip; the rest of the suite still runs.

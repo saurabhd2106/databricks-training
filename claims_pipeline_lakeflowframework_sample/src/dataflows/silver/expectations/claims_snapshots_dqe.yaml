@@ -1,8 +1,38 @@
 expect_or_drop:
+  - name: claim_id_not_null
+    constraint: claim_id IS NOT NULL
+    tag: Completeness
+  - name: policy_id_not_null
+    constraint: policy_id IS NOT NULL
+    tag: Completeness
+  - name: snapshot_date_not_null
+    constraint: snapshot_date IS NOT NULL
+    tag: Completeness
+  - name: date_of_loss_not_null
+    constraint: date_of_loss IS NOT NULL
+    tag: Completeness
   - name: incurred_gte_paid
     constraint: incurred_amount >= paid_to_date
     tag: Validity
 expect:
+  - name: non_negative_incurred
+    constraint: incurred_amount >= 0
+    tag: Validity
+  - name: non_negative_paid
+    constraint: paid_to_date >= 0
+    tag: Validity
   - name: reported_on_or_after_loss
     constraint: reported_date >= date_of_loss
+    tag: Validity
+  - name: snapshot_on_or_after_loss
+    constraint: snapshot_date >= date_of_loss
+    tag: Consistency
+  - name: snapshot_on_or_after_reported
+    constraint: snapshot_date >= reported_date
+    tag: Consistency
+  - name: valid_claim_status
+    constraint: claim_status IN ('Open', 'Closed', 'Reopened')
+    tag: Validity
+  - name: valid_peril_type
+    constraint: peril_type IN ('Wind', 'Riverine Flood', 'Storm Surge')
     tag: Validity

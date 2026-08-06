@@ -1,0 +1,20 @@
+expect_or_drop:
+  - name: claim_id_not_null
+    constraint: claim_id IS NOT NULL AND length(trim(claim_id)) > 0
+    tag: Completeness
+  - name: policy_id_not_null
+    constraint: policy_id IS NOT NULL AND length(trim(policy_id)) > 0
+    tag: Completeness
+  - name: snapshot_date_not_null
+    constraint: snapshot_date IS NOT NULL AND length(trim(snapshot_date)) > 0
+    tag: Completeness
+expect:
+  - name: date_of_loss_not_empty
+    constraint: date_of_loss IS NOT NULL AND length(trim(date_of_loss)) > 0
+    tag: Completeness
+  - name: peril_type_not_empty
+    constraint: peril_type IS NOT NULL AND length(trim(peril_type)) > 0
+    tag: Completeness
+  - name: claim_status_not_empty
+    constraint: claim_status IS NOT NULL AND length(trim(claim_status)) > 0
+    tag: Completeness

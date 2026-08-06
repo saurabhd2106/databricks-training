@@ -122,6 +122,41 @@ fixtures/sample-data/ (claims batches + dims)
 | `gold_portfolio_exposure` | Premiums ⋈ risk zones |
 | `gold_claims_development` | Snapshot lag / reserve (uses claim snapshots) |
 
+### AI/BI Lakeview dashboards
+
+Deployed as bundle resources against SQL warehouse `${var.warehouse_id}` (Serverless Starter Warehouse).
+
+Dashboard SQL uses **unqualified** table names. Each dashboard resource sets `dataset_catalog: ${var.catalog}` and `dataset_schema: ${resources.schemas.actuarial_streaming.name}`, so deploy resolves the schema correctly (`dev_<user>_streaming` in development, `streaming` in production).
+
+| Dashboard resource | Audience | Sources |
+|--------------------|----------|---------|
+| `underwriting_portfolio` | Underwriters / portfolio managers | `gold_loss_ratio_by_risk`, `gold_portfolio_exposure` |
+| `claims_operations` | Claims ops | `gold_claims_summary` |
+| `catastrophe_events` | Cat / reinsurance | `gold_event_loss_summary` |
+| `claims_development` | Actuaries / reserving | `gold_claims_development` |
+| `pipeline_monitoring` | Data eng / platform ops | Quarantine + bronze / silver / gold row counts |
+| `pipeline_event_log` | Data eng / platform ops | Published pipeline event log (`actuarial_claim_streaming_etl_event_log`) |
+
+The pipeline publishes its event log as `actuarial_claim_streaming_etl_event_log` in the same schema as the medallion tables (do not delete that table). Refresh the pipeline after deploy so the table is populated before opening the event log dashboard.
+
+Definitions: `resources/*.dashboard.yml` + `src/dashboards/*.lvdash.json`.
+
+```bash
+databricks bundle deploy --target dev
+databricks bundle open underwriting_portfolio --target dev
+databricks bundle open claims_operations --target dev
+databricks bundle open catastrophe_events --target dev
+databricks bundle open claims_development --target dev
+databricks bundle open pipeline_monitoring --target dev
+databricks bundle open pipeline_event_log --target dev
+```
+
+After UI edits, sync local JSON with:
+
+```bash
+databricks bundle generate dashboard --resource underwriting_portfolio --force
+```
+
 ---
 
 ## Sample data design
@@ -149,9 +184,10 @@ actuarial_claim_streaming_pipeline/
 ├── pyproject.toml
 ├── README.md
 ├── fixtures/sample-data/
-├── resources/                     # schema, volume, pipeline, job
+├── resources/                     # schema, volume, pipeline, job, dashboards
 ├── src/
 │   ├── notebooks/                 # setup + land
+│   ├── dashboards/                # AI/BI Lakeview .lvdash.json
 │   ├── actuarial_claim_streaming_pipeline/
 │   │   ├── auto_loader.py         # cloudFiles + quarantine helpers
 │   │   ├── silver.py / gold.py    # DataFrame builders (unit-tested)
@@ -170,7 +206,7 @@ actuarial_claim_streaming_pipeline/
 
 ### Bundle
 
-[`databricks.yml`](databricks.yml) — variables `catalog`, `cluster_id`, `landing_volume_path`; targets `dev` / `prod`.
+[`databricks.yml`](databricks.yml) — variables `catalog`, `cluster_id`, `landing_volume_path`, `warehouse_id`; targets `dev` / `prod`.
 
 ### UC resources
 
@@ -343,6 +379,7 @@ Dev target uses development-mode prefixes and paused schedules; prod uses the fi
 - Continuous / real-time pipeline mode
 - Richer quarantine (silver-rule failures, reprocessing flows)
 - Path-filtered PR CI (in addition to `workflow_dispatch`)
+- Scheduled dashboard snapshot emails / Genie spaces over gold marts
 
 ---
 

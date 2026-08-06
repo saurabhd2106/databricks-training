@@ -37,3 +37,6 @@ targetDetails:
   tableProperties:
     delta.enableChangeDataFeed: 'true'
   schemaPath: premium_bordereau_schema.json
+
+dataQualityExpectationsEnabled: true
+dataQualityExpectationsPath: ./premium_bordereau_dqe.yaml

@@ -1,0 +1,17 @@
+expect_or_drop:
+  - name: policy_id_not_null
+    constraint: policy_id IS NOT NULL AND length(trim(policy_id)) > 0
+    tag: Completeness
+expect:
+  - name: sum_insured_not_empty
+    constraint: sum_insured IS NOT NULL AND length(trim(sum_insured)) > 0
+    tag: Completeness
+  - name: annual_premium_not_empty
+    constraint: annual_premium IS NOT NULL AND length(trim(annual_premium)) > 0
+    tag: Completeness
+  - name: policy_start_date_not_empty
+    constraint: policy_start_date IS NOT NULL AND length(trim(policy_start_date)) > 0
+    tag: Completeness
+  - name: policy_end_date_not_empty
+    constraint: policy_end_date IS NOT NULL AND length(trim(policy_end_date)) > 0
+    tag: Completeness

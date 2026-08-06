@@ -19,6 +19,8 @@ variables:
     description: Existing all-purpose cluster ID for land/setup notebook tasks
   landing_volume_path:
     description: UC Volume path where sample CSVs are landed for Auto Loader
+  warehouse_id:
+    description: SQL warehouse ID for AI/BI Lakeview dashboards
 
 targets:
   dev:
@@ -31,6 +33,7 @@ targets:
       catalog: actuarial
       cluster_id: 0730-111218-jwuz715u
       landing_volume_path: /Volumes/actuarial/streaming/landing
+      warehouse_id: 66d7b615b6cff38c
     presets:
       artifacts_dynamic_version: true
   prod:
@@ -42,6 +45,7 @@ targets:
       catalog: actuarial
       cluster_id: 0730-111218-jwuz715u
       landing_volume_path: /Volumes/actuarial/streaming/landing
+      warehouse_id: 66d7b615b6cff38c
     permissions:
       - user_name: databricks-np@saurabhuptut.onmicrosoft.com
         level: CAN_MANAGE

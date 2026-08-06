@@ -1,0 +1,26 @@
+expect_or_drop:
+  - name: policy_id_not_null
+    constraint: policy_id IS NOT NULL
+    tag: Completeness
+expect:
+  - name: positive_sum_insured
+    constraint: sum_insured > 0
+    tag: Validity
+  - name: positive_annual_premium
+    constraint: annual_premium > 0
+    tag: Validity
+  - name: policy_start_before_end
+    constraint: policy_start_date < policy_end_date
+    tag: Validity
+  - name: dates_not_null
+    constraint: policy_start_date IS NOT NULL AND policy_end_date IS NOT NULL
+    tag: Completeness
+  - name: valid_wind_risk_band
+    constraint: wind_risk_band IN ('T-W', 'B-F', 'Q-S', 'L-P')
+    tag: Validity
+  - name: valid_building_type
+    constraint: building_type IN ('Home', 'SME', 'Strata')
+    tag: Validity
+  - name: premium_lte_sum_insured
+    constraint: annual_premium <= sum_insured
+    tag: Consistency

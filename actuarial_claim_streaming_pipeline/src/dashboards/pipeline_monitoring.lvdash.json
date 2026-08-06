@@ -1,0 +1,376 @@
+{
+  "datasets": [
+    {
+      "name": "medallion_counts",
+      "displayName": "Medallion table counts",
+      "query": "SELECT 'bronze_raw' AS layer, 'bronze_claims_bordereau_raw' AS table_name, COUNT(*) AS row_count, COUNT(DISTINCT _source_file) AS source_file_count\nFROM bronze_claims_bordereau_raw\nUNION ALL\nSELECT 'bronze_raw', 'bronze_premium_bordereau_raw', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_premium_bordereau_raw\nUNION ALL\nSELECT 'bronze_raw', 'bronze_risk_zone_lookup_raw', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_risk_zone_lookup_raw\nUNION ALL\nSELECT 'bronze_raw', 'bronze_cyclone_events_raw', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_cyclone_events_raw\nUNION ALL\nSELECT 'bronze_clean', 'bronze_claims_bordereau', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_claims_bordereau\nUNION ALL\nSELECT 'bronze_clean', 'bronze_premium_bordereau', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_premium_bordereau\nUNION ALL\nSELECT 'bronze_clean', 'bronze_risk_zone_lookup', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_risk_zone_lookup\nUNION ALL\nSELECT 'bronze_clean', 'bronze_cyclone_events', COUNT(*), COUNT(DISTINCT _source_file)\nFROM bronze_cyclone_events\nUNION ALL\nSELECT 'silver', 'silver_claims_bordereau', COUNT(*), CAST(NULL AS BIGINT)\nFROM silver_claims_bordereau\nUNION ALL\nSELECT 'silver', 'silver_claims_current', COUNT(*), CAST(NULL AS BIGINT)\nFROM silver_claims_current\nUNION ALL\nSELECT 'silver', 'silver_premium_bordereau', COUNT(*), CAST(NULL AS BIGINT)\nFROM silver_premium_bordereau\nUNION ALL\nSELECT 'silver', 'silver_cyclone_events', COUNT(*), CAST(NULL AS BIGINT)\nFROM silver_cyclone_events\nUNION ALL\nSELECT 'silver', 'silver_risk_zone_lookup', COUNT(*), CAST(NULL AS BIGINT)\nFROM silver_risk_zone_lookup\nUNION ALL\nSELECT 'gold', 'gold_claims_summary', COUNT(*), CAST(NULL AS BIGINT)\nFROM gold_claims_summary\nUNION ALL\nSELECT 'gold', 'gold_loss_ratio_by_risk', COUNT(*), CAST(NULL AS BIGINT)\nFROM gold_loss_ratio_by_risk\nUNION ALL\nSELECT 'gold', 'gold_event_loss_summary', COUNT(*), CAST(NULL AS BIGINT)\nFROM gold_event_loss_summary\nUNION ALL\nSELECT 'gold', 'gold_portfolio_exposure', COUNT(*), CAST(NULL AS BIGINT)\nFROM gold_portfolio_exposure\nUNION ALL\nSELECT 'gold', 'gold_claims_development', COUNT(*), CAST(NULL AS BIGINT)\nFROM gold_claims_development"
+    },
+    {
+      "name": "quarantine_summary",
+      "displayName": "Quarantine summary",
+      "query": "SELECT 'claims' AS stream, quarantine_reason, COUNT(*) AS row_count, MAX(_quarantine_ts) AS latest_quarantine_ts\nFROM quarantine_bronze_claims_bordereau\nGROUP BY quarantine_reason\nUNION ALL\nSELECT 'premiums', quarantine_reason, COUNT(*), MAX(_quarantine_ts)\nFROM quarantine_bronze_premium_bordereau\nGROUP BY quarantine_reason\nUNION ALL\nSELECT 'risk_zones', quarantine_reason, COUNT(*), MAX(_quarantine_ts)\nFROM quarantine_bronze_risk_zone_lookup\nGROUP BY quarantine_reason\nUNION ALL\nSELECT 'cyclone_events', quarantine_reason, COUNT(*), MAX(_quarantine_ts)\nFROM quarantine_bronze_cyclone_events\nGROUP BY quarantine_reason"
+    }
+  ],
+  "pages": [
+    {
+      "name": "main",
+      "displayName": "Pipeline Monitoring",
+      "layout": [
+        {
+          "position": { "x": 0, "y": 0, "width": 6, "height": 1 },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# Pipeline Monitoring\nIngest volume, quarantine volume, and medallion readiness across bronze, silver, and gold tables (schema from bundle deploy)."
+          }
+        },
+        {
+          "position": { "x": 0, "y": 1, "width": 3, "height": 1 },
+          "widget": {
+            "name": "filter_layer",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "layer", "expression": "`layer`" },
+                    { "name": "layer_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "layer", "displayName": "Layer", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Layer" }
+            }
+          }
+        },
+        {
+          "position": { "x": 3, "y": 1, "width": 3, "height": 1 },
+          "widget": {
+            "name": "filter_stream",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "quarantine_summary",
+                  "fields": [
+                    { "name": "stream", "expression": "`stream`" },
+                    { "name": "stream_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "stream", "displayName": "Stream", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Quarantine stream" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_quarantine_total",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine_summary",
+                  "fields": [
+                    { "name": "total_quarantine", "expression": "COALESCE(SUM(`row_count`), 0)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "total_quarantine", "displayName": "Quarantine rows" }
+              },
+              "frame": { "showTitle": true, "title": "Total quarantine rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_bronze_claims",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "bronze_claims_rows",
+                      "expression": "SUM(CASE WHEN `table_name` = 'bronze_claims_bordereau' THEN `row_count` ELSE 0 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "bronze_claims_rows", "displayName": "Bronze claims" }
+              },
+              "frame": { "showTitle": true, "title": "Bronze clean claims rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 4, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_silver_current",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "silver_current_rows",
+                      "expression": "SUM(CASE WHEN `table_name` = 'silver_claims_current' THEN `row_count` ELSE 0 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "silver_current_rows", "displayName": "Silver current" }
+              },
+              "frame": { "showTitle": true, "title": "Silver claims current rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 4, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_gold_populated",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    {
+                      "name": "gold_populated",
+                      "expression": "COUNT(CASE WHEN `layer` = 'gold' AND `row_count` > 0 THEN 1 END)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "gold_populated", "displayName": "Gold tables" }
+              },
+              "frame": { "showTitle": true, "title": "Gold tables with rows" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 4, "width": 4, "height": 4 },
+          "widget": {
+            "name": "bar_row_counts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "table_name", "expression": "`table_name`" },
+                    { "name": "row_count", "expression": "SUM(`row_count`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "row_count",
+                  "displayName": "Rows",
+                  "scale": { "type": "quantitative" }
+                },
+                "y": {
+                  "fieldName": "table_name",
+                  "displayName": "Table",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Row counts by table" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 6, "width": 2, "height": 4 },
+          "widget": {
+            "name": "pie_quarantine_stream",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine_summary",
+                  "fields": [
+                    { "name": "stream", "expression": "`stream`" },
+                    { "name": "rows", "expression": "SUM(`row_count`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": { "fieldName": "rows", "displayName": "Rows" },
+                "color": {
+                  "fieldName": "stream",
+                  "displayName": "Stream",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Quarantine by stream" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 10, "width": 3, "height": 4 },
+          "widget": {
+            "name": "bar_quarantine_reason",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine_summary",
+                  "fields": [
+                    { "name": "quarantine_reason", "expression": "`quarantine_reason`" },
+                    { "name": "rows", "expression": "SUM(`row_count`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "rows",
+                  "displayName": "Rows",
+                  "scale": { "type": "quantitative" }
+                },
+                "y": {
+                  "fieldName": "quarantine_reason",
+                  "displayName": "Reason",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Quarantine by reason" }
+            }
+          }
+        },
+        {
+          "position": { "x": 3, "y": 10, "width": 3, "height": 4 },
+          "widget": {
+            "name": "table_quarantine",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine_summary",
+                  "fields": [
+                    { "name": "stream", "expression": "`stream`" },
+                    { "name": "quarantine_reason", "expression": "`quarantine_reason`" },
+                    { "name": "row_count", "expression": "`row_count`" },
+                    { "name": "latest_quarantine_ts", "expression": "`latest_quarantine_ts`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "stream", "type": "string", "displayAs": "string", "visible": true, "order": 1, "title": "Stream", "displayName": "Stream" },
+                  { "fieldName": "quarantine_reason", "type": "string", "displayAs": "string", "visible": true, "order": 2, "title": "Reason", "displayName": "Reason" },
+                  { "fieldName": "row_count", "type": "integer", "displayAs": "number", "visible": true, "order": 3, "title": "Rows", "displayName": "Rows", "numberFormat": "0" },
+                  { "fieldName": "latest_quarantine_ts", "type": "string", "displayAs": "string", "visible": true, "order": 4, "title": "Latest quarantine ts", "displayName": "Latest quarantine ts" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Quarantine breakdown" },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 14, "width": 6, "height": 5 },
+          "widget": {
+            "name": "table_medallion",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "medallion_counts",
+                  "fields": [
+                    { "name": "layer", "expression": "`layer`" },
+                    { "name": "table_name", "expression": "`table_name`" },
+                    { "name": "row_count", "expression": "`row_count`" },
+                    { "name": "source_file_count", "expression": "`source_file_count`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "layer", "type": "string", "displayAs": "string", "visible": true, "order": 1, "title": "Layer", "displayName": "Layer" },
+                  { "fieldName": "table_name", "type": "string", "displayAs": "string", "visible": true, "order": 2, "title": "Table", "displayName": "Table" },
+                  { "fieldName": "row_count", "type": "integer", "displayAs": "number", "visible": true, "order": 3, "title": "Rows", "displayName": "Rows", "numberFormat": "0" },
+                  { "fieldName": "source_file_count", "type": "integer", "displayAs": "number", "visible": true, "order": 4, "title": "Source files", "displayName": "Source files", "numberFormat": "0" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Medallion inventory" },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

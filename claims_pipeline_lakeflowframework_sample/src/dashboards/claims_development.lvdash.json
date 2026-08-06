@@ -1,0 +1,432 @@
+{
+  "datasets": [
+    {
+      "name": "claims_dev",
+      "displayName": "Claims development",
+      "query": "SELECT\n  peril_type,\n  region_name,\n  wind_risk_band,\n  loss_month,\n  reported_month,\n  claim_count,\n  avg_reporting_lag_days,\n  max_reporting_lag_days,\n  total_incurred,\n  total_paid,\n  outstanding_reserve,\n  payment_progress_pct\nFROM claims_development"
+    }
+  ],
+  "pages": [
+    {
+      "name": "main",
+      "displayName": "Claims Development",
+      "layout": [
+        {
+          "position": { "x": 0, "y": 0, "width": 6, "height": 1 },
+          "widget": {
+            "name": "title",
+            "textbox_spec": "# Claims Development & Reporting Lag\nReporting lag, payment progress, and reserve emergence from claim snapshots."
+          }
+        },
+        {
+          "position": { "x": 0, "y": 1, "width": 2, "height": 1 },
+          "widget": {
+            "name": "filter_peril",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "peril_type", "expression": "`peril_type`" },
+                    { "name": "peril_type_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "peril_type", "displayName": "Peril", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Peril" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 1, "width": 2, "height": 1 },
+          "widget": {
+            "name": "filter_region",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "region_name", "expression": "`region_name`" },
+                    { "name": "region_name_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "region_name", "displayName": "Region", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Region" }
+            }
+          }
+        },
+        {
+          "position": { "x": 4, "y": 1, "width": 2, "height": 1 },
+          "widget": {
+            "name": "filter_risk_band",
+            "queries": [
+              {
+                "name": "filter_q",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "wind_risk_band", "expression": "`wind_risk_band`" },
+                    { "name": "wind_risk_band_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  { "fieldName": "wind_risk_band", "displayName": "Wind risk band", "queryName": "filter_q" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Wind risk band" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_avg_lag",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    {
+                      "name": "avg_lag",
+                      "expression": "ROUND(SUM(`avg_reporting_lag_days` * `claim_count`) / NULLIF(SUM(`claim_count`), 0), 1)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "avg_lag", "displayName": "Avg lag days" }
+              },
+              "frame": { "showTitle": true, "title": "Avg reporting lag (days)" }
+            }
+          }
+        },
+        {
+          "position": { "x": 2, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_reserve",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "sum_reserve", "expression": "SUM(`outstanding_reserve`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "sum_reserve", "displayName": "Reserve" }
+              },
+              "frame": { "showTitle": true, "title": "Outstanding reserve" }
+            }
+          }
+        },
+        {
+          "position": { "x": 4, "y": 2, "width": 2, "height": 2 },
+          "widget": {
+            "name": "kpi_payment_progress",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    {
+                      "name": "payment_progress",
+                      "expression": "ROUND(SUM(`total_paid`) / NULLIF(SUM(`total_incurred`), 0) * 100, 2)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "payment_progress", "displayName": "Payment progress %" }
+              },
+              "frame": { "showTitle": true, "title": "Payment progress %" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 4, "width": 6, "height": 4 },
+          "widget": {
+            "name": "line_lag_by_month",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "loss_month", "expression": "`loss_month`" },
+                    {
+                      "name": "avg_lag",
+                      "expression": "ROUND(SUM(`avg_reporting_lag_days` * `claim_count`) / NULLIF(SUM(`claim_count`), 0), 1)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "loss_month",
+                  "displayName": "Loss month",
+                  "scale": { "type": "temporal" },
+                  "axis": { "title": "Loss month" }
+                },
+                "y": {
+                  "fieldName": "avg_lag",
+                  "displayName": "Avg lag days",
+                  "scale": { "type": "quantitative" },
+                  "axis": { "title": "Avg reporting lag (days)" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Avg reporting lag by loss month" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 8, "width": 3, "height": 4 },
+          "widget": {
+            "name": "bar_incurred_paid_month",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "loss_month", "expression": "`loss_month`" },
+                    { "name": "total_incurred", "expression": "SUM(`total_incurred`)" },
+                    { "name": "total_paid", "expression": "SUM(`total_paid`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "loss_month",
+                  "displayName": "Loss month",
+                  "scale": { "type": "temporal" }
+                },
+                "y": {
+                  "fieldName": "total_incurred",
+                  "displayName": "Incurred",
+                  "scale": { "type": "quantitative" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Incurred by loss month" }
+            }
+          }
+        },
+        {
+          "position": { "x": 3, "y": 8, "width": 3, "height": 4 },
+          "widget": {
+            "name": "bar_payment_progress_peril",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "peril_type", "expression": "`peril_type`" },
+                    {
+                      "name": "payment_progress_pct",
+                      "expression": "ROUND(SUM(`total_paid`) / NULLIF(SUM(`total_incurred`), 0) * 100, 2)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "peril_type",
+                  "displayName": "Peril",
+                  "scale": { "type": "categorical" }
+                },
+                "y": {
+                  "fieldName": "payment_progress_pct",
+                  "displayName": "Payment progress %",
+                  "scale": { "type": "quantitative" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Payment progress by peril" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 12, "width": 3, "height": 4 },
+          "widget": {
+            "name": "bar_max_lag_region",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "region_name", "expression": "`region_name`" },
+                    { "name": "max_lag", "expression": "MAX(`max_reporting_lag_days`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "max_lag",
+                  "displayName": "Max lag days",
+                  "scale": { "type": "quantitative" }
+                },
+                "y": {
+                  "fieldName": "region_name",
+                  "displayName": "Region",
+                  "scale": { "type": "categorical" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Max reporting lag by region" }
+            }
+          }
+        },
+        {
+          "position": { "x": 3, "y": 12, "width": 3, "height": 4 },
+          "widget": {
+            "name": "bar_max_lag_band",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "wind_risk_band", "expression": "`wind_risk_band`" },
+                    { "name": "max_lag", "expression": "MAX(`max_reporting_lag_days`)" }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "wind_risk_band",
+                  "displayName": "Wind risk band",
+                  "scale": { "type": "categorical" }
+                },
+                "y": {
+                  "fieldName": "max_lag",
+                  "displayName": "Max lag days",
+                  "scale": { "type": "quantitative" }
+                }
+              },
+              "frame": { "showTitle": true, "title": "Max reporting lag by wind risk band" }
+            }
+          }
+        },
+        {
+          "position": { "x": 0, "y": 16, "width": 6, "height": 5 },
+          "widget": {
+            "name": "table_triangle",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "claims_dev",
+                  "fields": [
+                    { "name": "loss_month", "expression": "`loss_month`" },
+                    { "name": "reported_month", "expression": "`reported_month`" },
+                    { "name": "peril_type", "expression": "`peril_type`" },
+                    { "name": "region_name", "expression": "`region_name`" },
+                    { "name": "claim_count", "expression": "`claim_count`" },
+                    { "name": "avg_reporting_lag_days", "expression": "`avg_reporting_lag_days`" },
+                    { "name": "total_incurred", "expression": "`total_incurred`" },
+                    { "name": "total_paid", "expression": "`total_paid`" },
+                    { "name": "outstanding_reserve", "expression": "`outstanding_reserve`" },
+                    { "name": "payment_progress_pct", "expression": "`payment_progress_pct`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "loss_month", "type": "string", "displayAs": "string", "visible": true, "order": 1, "title": "Loss month", "displayName": "Loss month" },
+                  { "fieldName": "reported_month", "type": "string", "displayAs": "string", "visible": true, "order": 2, "title": "Reported month", "displayName": "Reported month" },
+                  { "fieldName": "peril_type", "type": "string", "displayAs": "string", "visible": true, "order": 3, "title": "Peril", "displayName": "Peril" },
+                  { "fieldName": "region_name", "type": "string", "displayAs": "string", "visible": true, "order": 4, "title": "Region", "displayName": "Region" },
+                  { "fieldName": "claim_count", "type": "integer", "displayAs": "number", "visible": true, "order": 5, "title": "Claims", "displayName": "Claims", "numberFormat": "0" },
+                  { "fieldName": "avg_reporting_lag_days", "type": "float", "displayAs": "number", "visible": true, "order": 6, "title": "Avg lag days", "displayName": "Avg lag days", "numberFormat": "0.0" },
+                  { "fieldName": "total_incurred", "type": "float", "displayAs": "number", "visible": true, "order": 7, "title": "Incurred", "displayName": "Incurred", "numberFormat": "0,0.00" },
+                  { "fieldName": "total_paid", "type": "float", "displayAs": "number", "visible": true, "order": 8, "title": "Paid", "displayName": "Paid", "numberFormat": "0,0.00" },
+                  { "fieldName": "outstanding_reserve", "type": "float", "displayAs": "number", "visible": true, "order": 9, "title": "Reserve", "displayName": "Reserve", "numberFormat": "0,0.00" },
+                  { "fieldName": "payment_progress_pct", "type": "float", "displayAs": "number", "visible": true, "order": 10, "title": "Payment progress %", "displayName": "Payment progress %", "numberFormat": "0.00" }
+                ]
+              },
+              "frame": { "showTitle": true, "title": "Loss month × reported month (development triangle proxy)" },
+              "itemsPerPage": 25,
+              "withRowNumber": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

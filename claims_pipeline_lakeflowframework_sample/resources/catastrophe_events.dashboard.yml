@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    catastrophe_events:
+      display_name: "Catastrophe Event Losses"
+      file_path: ../src/dashboards/catastrophe_events.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.gold_schema}

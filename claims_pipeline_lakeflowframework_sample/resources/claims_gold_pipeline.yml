@@ -18,3 +18,9 @@ resources:
         logicalEnv: ${var.logical_env}
         pipeline.dataFlowGroupFilter: claims_gold
       root_path: ${workspace.file_path}/src
+      # Publish event log to UC so Lakeview can query a stable table (not event_log(pipeline_id)).
+      # Do not delete this table — removing it can break future pipeline updates.
+      event_log:
+        name: claims_lff_gold_event_log
+        catalog: ${var.catalog}
+        schema: ${var.gold_schema}
