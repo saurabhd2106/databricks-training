@@ -1,0 +1,10 @@
+# UC Volume for landing sample CSVs before Auto Loader bronze ingest.
+
+resources:
+  volumes:
+    actuarial_dev_landing:
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      name: landing
+      volume_type: MANAGED
+      comment: Landing zone for streaming bronze CSVs (Auto Loader).

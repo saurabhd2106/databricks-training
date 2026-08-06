@@ -1,0 +1,8 @@
+# Unity Catalog schema for streaming bronze tables and the landing volume.
+
+resources:
+  schemas:
+    actuarial_dev:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: Actuarial streaming bronze (Auto Loader Streaming Tables) and landing volume.

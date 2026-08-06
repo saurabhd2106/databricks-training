@@ -1,0 +1,47 @@
+# Declarative Automation Bundle: actuarial streaming bronze ingest (Auto Loader).
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+bundle:
+  name: actuarial_streaming_pipeline
+  uuid: 4bb03510-0da9-4ac6-9884-cd71a4b254cd
+
+include:
+  - resources/*.yml
+
+artifacts:
+  python_artifact:
+    type: whl
+    build: uv build --wheel
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for streaming assets
+  schema:
+    description: Unity Catalog schema for streaming assets
+  landing_volume_path:
+    description: UC Volume path where sample CSVs are landed for Auto Loader
+
+targets:
+  dev:
+    # Development copies get a '[dev user]' prefix; schedules/triggers are paused.
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+    variables:
+      catalog: actuarial
+      schema: dev
+      landing_volume_path: /Volumes/actuarial/dev/landing
+    presets:
+      artifacts_dynamic_version: true
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7405611775215693.13.azuredatabricks.net
+      root_path: /Workspace/Users/databricks-np@saurabhuptut.onmicrosoft.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: actuarial
+      schema: dev
+      landing_volume_path: /Volumes/actuarial/dev/landing
+    permissions:
+      - user_name: databricks-np@saurabhuptut.onmicrosoft.com
+        level: CAN_MANAGE

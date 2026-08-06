@@ -1,0 +1,41 @@
+[project]
+name = "actuarial_streaming_pipeline"
+version = "0.0.1"
+authors = [{ name = "databricks-np@saurabhuptut.onmicrosoft.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # Job/pipeline dependencies can be added here later.
+    # For serverless pipelines, prefer the pipeline.yml environment section.
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "databricks-dlt",
+    "databricks-connect>=15.4,<15.5",
+    "ipykernel",
+    "pyyaml",
+]
+
+[project.scripts]
+main = "actuarial_streaming_pipeline.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/actuarial_streaming_pipeline"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/notebooks"]
+
+[tool.ruff.lint.per-file-ignores]
+# `spark` is injected by the Lakeflow pipeline runtime into dataset modules.
+"src/actuarial_streaming_etl/transformations/*.py" = ["F821"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
