@@ -1,5 +1,7 @@
 # actuarial_claim_streaming_pipeline
 
+**Learn the bundle:** step-by-step trainer guide covering `databricks.yml`, permissions, schema/volume, job, notebooks, claims path (raw → quarantine → typed → silver → gold), the Python wheel, and hands-on execution labs → [`docs/bundle-training-guide.md`](docs/bundle-training-guide.md).
+
 Databricks Asset Bundle that demonstrates a full actuarial **streaming medallion** on Unity Catalog using a serverless **Lakeflow Declarative Pipeline**.
 
 It showcases **all three Lakeflow dataset types**:
