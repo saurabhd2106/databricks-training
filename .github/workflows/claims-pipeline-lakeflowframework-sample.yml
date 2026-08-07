@@ -1,6 +1,6 @@
 # Test, validate, deploy, and run the claims_pipeline_lakeflowframework_sample Databricks Asset Bundle.
 # Trigger manually via Actions → "Claims pipeline Lakeflow Framework sample" → Run workflow.
-# Requires repo secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
+# Requires GitHub environment "dev" secrets: DATABRICKS_HOST, DATABRICKS_TOKEN
 # Deploys Lakeview dashboards via bundle deploy (resources/*.dashboard.yml).
 # See https://learn.microsoft.com/en-us/azure/databricks/dev-tools/ci-cd/github
 
@@ -21,6 +21,7 @@ jobs:
   test:
     name: Run pytest
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: claims_pipeline_lakeflowframework_sample
@@ -42,6 +43,7 @@ jobs:
     name: Validate bundle
     needs: test
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: claims_pipeline_lakeflowframework_sample
@@ -58,6 +60,7 @@ jobs:
     name: Deploy and run
     needs: validate
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v7
         with:
