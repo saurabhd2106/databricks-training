@@ -346,21 +346,26 @@ For policies, add `is_active` in `selectExp`:
 
 Full example: [`claims_snapshots_main.yaml`](../src/dataflows/silver/dataflowspec/claims_snapshots_main.yaml).
 
-### 6b. Data quality expectations
+### 6b. Data quality expectations and quarantine
 
-Add YAML under each layer’s `expectations/` folder and wire every bronze + silver SCD1 dataflowspec:
+Add YAML under each layer’s `expectations/` folder and wire every bronze + silver SCD1 dataflowspec (and each gold business mart MV):
 
 ```yaml
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./claims_snapshots_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{silver_schema}'
 ```
 
-(The framework resolves that path under the group’s `expectations/` folder.)
+(The framework resolves that path under the group’s `expectations/` folder. With `quarantineMode: table`, it also creates `{target}_quarantine` in the given database.)
 
 | Layer | Files |
 |-------|-------|
 | Bronze | [`bronze/expectations/`](../src/dataflows/bronze/expectations/) — key / non-empty string hygiene |
 | Silver | [`claims_snapshots_dqe.yaml`](../src/dataflows/silver/expectations/claims_snapshots_dqe.yaml), [`policies_dqe.yaml`](../src/dataflows/silver/expectations/policies_dqe.yaml), [`cyclone_events_dqe.yaml`](../src/dataflows/silver/expectations/cyclone_events_dqe.yaml), [`risk_zones_dqe.yaml`](../src/dataflows/silver/expectations/risk_zones_dqe.yaml) |
+| Gold | [`gold/expectations/`](../src/dataflows/gold/expectations/) — light non-negative / completeness checks on business marts |
 
 Example silver claims rules (abbreviated):
 
@@ -381,7 +386,7 @@ expect:
     tag: Validity
 ```
 
-Use `expect_or_drop` for keys and hard financial inconsistencies; use `expect` for soft domain / date-order anomalies (kept + metrics). Gold and `claims_current` have no separate DQE — they inherit from silver.
+Use `expect_or_drop` for keys and hard financial inconsistencies; use `expect` for soft domain / date-order anomalies (kept + metrics). `claims_current` and `medallion_inventory` have no separate DQE — they inherit quality from upstream (or are ops meta).
 
 ### 6c. `claims_current` materialized view
 
@@ -426,13 +431,13 @@ Gold marts are SQL materialized views over silver — **consumption-ready tables
 | [`claims_summary.sql`](../src/dataflows/gold/dml/claims_summary.sql) | Peril × status × region × band × building; reserve / settlement | `claims_operations` |
 | [`claims_development.sql`](../src/dataflows/gold/dml/claims_development.sql) | Peril × region × band × loss/reported month; reporting lag | `claims_development` |
 | [`portfolio_exposure.sql`](../src/dataflows/gold/dml/portfolio_exposure.sql) | Sum insured / premium by underwriting dims | `underwriting_portfolio` |
-| [`medallion_inventory.sql`](../src/dataflows/gold/dml/medallion_inventory.sql) | Row counts + `MAX(_ingest_ts)` across bronze/silver/gold | `pipeline_monitoring` |
+| [`medallion_inventory.sql`](../src/dataflows/gold/dml/medallion_inventory.sql) | Row counts + `MAX(_ingest_ts)` across bronze/silver/gold (includes `*_quarantine`) | `pipeline_monitoring` |
 
 Use **FQN tokens** for cross-pipeline reads, e.g. `{silver_schema}.claims_current` (not `live.*`, because gold is a separate pipeline).
 
 ### Spec
 
-[`gold_marts_main.yaml`](../src/dataflows/gold/dataflowspec/gold_marts_main.yaml) registers every mart under `materializedViews` with `database: '{gold_schema}'` and a `sqlPath`. See the file in-repo for the full list (seven MVs).
+[`gold_marts_main.yaml`](../src/dataflows/gold/dataflowspec/gold_marts_main.yaml) registers every mart under `materializedViews` with `database: '{gold_schema}'` and a `sqlPath`. Business marts also enable DQE + `quarantineMode: table`; `medallion_inventory` does not. See the file in-repo for the full list (seven MVs).
 
 ---
 

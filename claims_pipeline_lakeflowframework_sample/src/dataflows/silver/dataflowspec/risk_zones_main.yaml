@@ -37,3 +37,7 @@ cdcSettings:
 
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./risk_zones_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{silver_schema}'

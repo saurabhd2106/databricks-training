@@ -34,3 +34,7 @@ targetDetails:
 
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./cyclone_events_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{bronze_schema}'

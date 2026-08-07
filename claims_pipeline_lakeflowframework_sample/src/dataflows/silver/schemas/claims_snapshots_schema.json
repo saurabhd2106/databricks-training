@@ -11,7 +11,6 @@
     {"name": "incurred_amount", "type": "decimal(18,2)", "nullable": true, "metadata": {}},
     {"name": "paid_to_date", "type": "decimal(18,2)", "nullable": true, "metadata": {}},
     {"name": "snapshot_date", "type": "date", "nullable": true, "metadata": {}},
-    {"name": "_ingest_ts", "type": "timestamp", "nullable": true, "metadata": {}},
-    {"name": "is_quarantined", "type": "boolean", "nullable": true, "metadata": {}}
+    {"name": "_ingest_ts", "type": "timestamp", "nullable": true, "metadata": {}}
   ]
 }

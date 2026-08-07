@@ -144,29 +144,34 @@ def test_business_dashboard_queries_use_gold_tables():
 
 
 def test_data_quality_expectations_wired():
-    """Bronze + silver SCD1 flows enable DQE and point at existing YAML files."""
+    """Bronze + silver SCD1 flows enable DQE, quarantine tables, and point at existing YAML files."""
     contracts = {
         "bronze": {
             "claims_bordereau_main.yaml": (
                 "./claims_bordereau_dqe.yaml",
+                "{bronze_schema}",
                 ("claim_id_not_null", "policy_id_not_null", "snapshot_date_not_null"),
             ),
             "premium_bordereau_main.yaml": (
                 "./premium_bordereau_dqe.yaml",
+                "{bronze_schema}",
                 ("policy_id_not_null", "sum_insured_not_empty"),
             ),
             "cyclone_events_main.yaml": (
                 "./cyclone_events_dqe.yaml",
+                "{bronze_schema}",
                 ("event_id_not_null", "start_date_not_empty"),
             ),
             "risk_zone_lookup_main.yaml": (
                 "./risk_zone_lookup_dqe.yaml",
+                "{bronze_schema}",
                 ("postcode_not_null", "wind_risk_band_not_empty"),
             ),
         },
         "silver": {
             "claims_snapshots_main.yaml": (
                 "./claims_snapshots_dqe.yaml",
+                "{silver_schema}",
                 (
                     "claim_id_not_null",
                     "policy_id_not_null",
@@ -178,6 +183,7 @@ def test_data_quality_expectations_wired():
             ),
             "policies_main.yaml": (
                 "./policies_dqe.yaml",
+                "{silver_schema}",
                 (
                     "policy_id_not_null",
                     "positive_sum_insured",
@@ -188,21 +194,27 @@ def test_data_quality_expectations_wired():
             ),
             "cyclone_events_main.yaml": (
                 "./cyclone_events_dqe.yaml",
+                "{silver_schema}",
                 ("event_id_not_null", "start_on_or_before_end", "dates_not_null"),
             ),
             "risk_zones_main.yaml": (
                 "./risk_zones_dqe.yaml",
+                "{silver_schema}",
                 ("postcode_not_null", "valid_wind_risk_band"),
             ),
         },
     }
 
     for layer, specs in contracts.items():
-        for spec_name, (dqe_path, rule_names) in specs.items():
+        for spec_name, (dqe_path, q_database, rule_names) in specs.items():
             spec_file = ROOT / "src" / "dataflows" / layer / "dataflowspec" / spec_name
             spec = yaml.safe_load(spec_file.read_text())
             assert spec.get("dataQualityExpectationsEnabled") is True, spec_name
             assert spec.get("dataQualityExpectationsPath") == dqe_path, spec_name
+            assert spec.get("quarantineMode") == "table", spec_name
+            q_details = spec.get("quarantineTargetDetails") or {}
+            assert q_details.get("targetFormat") == "delta", spec_name
+            assert q_details.get("database") == q_database, spec_name
 
             dqe_file = (
                 ROOT / "src" / "dataflows" / layer / "expectations" / Path(dqe_path).name
@@ -216,3 +228,80 @@ def test_data_quality_expectations_wired():
             }
             for rule_name in rule_names:
                 assert rule_name in names, f"{dqe_file.name} missing rule {rule_name}"
+
+
+def test_gold_mart_quarantine_and_dqe_wired():
+    """Business gold marts enable DQE + quarantine; medallion_inventory does not."""
+    contracts = {
+        "event_loss_summary": (
+            "./event_loss_summary_dqe.yaml",
+            ("claim_category_not_null", "non_negative_claim_count", "non_negative_total_incurred"),
+        ),
+        "policy_loss_ratio": (
+            "./policy_loss_ratio_dqe.yaml",
+            ("non_negative_policy_count", "non_negative_claim_count", "non_negative_total_premium"),
+        ),
+        "risk_band_performance": (
+            "./risk_band_performance_dqe.yaml",
+            ("wind_risk_band_not_null", "non_negative_policy_count", "non_negative_claim_count"),
+        ),
+        "claims_summary": (
+            "./claims_summary_dqe.yaml",
+            ("peril_type_not_null", "non_negative_claim_count", "non_negative_total_incurred"),
+        ),
+        "claims_development": (
+            "./claims_development_dqe.yaml",
+            ("peril_type_not_null", "non_negative_claim_count", "non_negative_total_paid"),
+        ),
+        "portfolio_exposure": (
+            "./portfolio_exposure_dqe.yaml",
+            ("non_negative_policy_count", "insurer_name_not_null", "non_negative_total_sum_insured"),
+        ),
+    }
+
+    spec = yaml.safe_load(
+        (ROOT / "src" / "dataflows" / "gold" / "dataflowspec" / "gold_marts_main.yaml").read_text()
+    )
+    mvs = spec["materializedViews"]
+
+    for mart, (dqe_path, rule_names) in contracts.items():
+        mv = mvs[mart]
+        assert mv.get("dataQualityExpectationsEnabled") is True, mart
+        assert mv.get("dataQualityExpectationsPath") == dqe_path, mart
+        assert mv.get("quarantineMode") == "table", mart
+        q_details = mv.get("quarantineTargetDetails") or {}
+        assert q_details.get("targetFormat") == "delta", mart
+        assert q_details.get("database") == "{gold_schema}", mart
+
+        dqe_file = (
+            ROOT / "src" / "dataflows" / "gold" / "expectations" / Path(dqe_path).name
+        )
+        assert dqe_file.is_file(), f"missing {dqe_file}"
+        dqe = yaml.safe_load(dqe_file.read_text())
+        names = {
+            rule["name"]
+            for section in ("expect_or_drop", "expect", "expect_or_fail")
+            for rule in dqe.get(section) or []
+        }
+        for rule_name in rule_names:
+            assert rule_name in names, f"{dqe_file.name} missing rule {rule_name}"
+
+    inventory = mvs["medallion_inventory"]
+    assert inventory.get("dataQualityExpectationsEnabled") is not True
+    assert inventory.get("quarantineMode") in (None, "off")
+
+    inventory_sql = (
+        ROOT / "src" / "dataflows" / "gold" / "dml" / "medallion_inventory.sql"
+    ).read_text()
+    for table in (
+        "claims_bordereau_quarantine",
+        "claims_snapshots_quarantine",
+        "event_loss_summary_quarantine",
+        "portfolio_exposure_quarantine",
+    ):
+        assert table in inventory_sql, f"medallion_inventory missing {table}"
+
+    schema = (
+        ROOT / "src" / "dataflows" / "silver" / "schemas" / "claims_snapshots_schema.json"
+    ).read_text()
+    assert "is_quarantined" not in schema

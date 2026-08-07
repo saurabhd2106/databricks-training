@@ -38,3 +38,7 @@ cdcSettings:
 
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./cyclone_events_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{silver_schema}'

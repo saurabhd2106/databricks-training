@@ -1,0 +1,14 @@
+expect_or_drop:
+  - name: non_negative_policy_count
+    constraint: policy_count >= 0
+    tag: Validity
+  - name: insurer_name_not_null
+    constraint: insurer_name IS NOT NULL
+    tag: Completeness
+expect:
+  - name: non_negative_total_sum_insured
+    constraint: total_sum_insured >= 0
+    tag: Validity
+  - name: non_negative_total_annual_premium
+    constraint: total_annual_premium >= 0
+    tag: Validity

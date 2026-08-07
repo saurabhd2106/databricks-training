@@ -40,3 +40,7 @@ targetDetails:
 
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./premium_bordereau_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{bronze_schema}'

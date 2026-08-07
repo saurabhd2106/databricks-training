@@ -1,0 +1,14 @@
+expect_or_drop:
+  - name: peril_type_not_null
+    constraint: peril_type IS NOT NULL
+    tag: Completeness
+  - name: non_negative_claim_count
+    constraint: claim_count >= 0
+    tag: Validity
+expect:
+  - name: non_negative_total_incurred
+    constraint: total_incurred >= 0
+    tag: Validity
+  - name: non_negative_total_paid
+    constraint: total_paid >= 0
+    tag: Validity

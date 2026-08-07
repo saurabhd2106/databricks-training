@@ -1,0 +1,14 @@
+expect_or_drop:
+  - name: wind_risk_band_not_null
+    constraint: wind_risk_band IS NOT NULL
+    tag: Completeness
+  - name: non_negative_policy_count
+    constraint: policy_count >= 0
+    tag: Validity
+expect:
+  - name: non_negative_claim_count
+    constraint: claim_count >= 0
+    tag: Validity
+  - name: non_negative_total_incurred
+    constraint: total_incurred >= 0
+    tag: Validity

@@ -32,3 +32,7 @@ targetDetails:
 
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./risk_zone_lookup_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{bronze_schema}'

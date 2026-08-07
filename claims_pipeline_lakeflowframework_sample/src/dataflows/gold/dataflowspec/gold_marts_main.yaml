@@ -9,31 +9,67 @@ materializedViews:
     tableDetails:
       database: '{gold_schema}'
       comment: Cat vs non-cat claim counts and loss totals by cyclone event, region, and peril.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./event_loss_summary_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   policy_loss_ratio:
     sqlPath: ./policy_loss_ratio.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Premium vs incurred loss ratio by insurer, region, wind risk band, building type, and mitigation.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./policy_loss_ratio_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   risk_band_performance:
     sqlPath: ./risk_band_performance.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Loss ratio and claim frequency by wind risk band and region.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./risk_band_performance_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   claims_summary:
     sqlPath: ./claims_summary.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Claims frequency, severity, and settlement by peril, status, and risk dimensions.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./claims_summary_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   claims_development:
     sqlPath: ./claims_development.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Reporting lag, payment progress, and reserve by peril and loss/reported month.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./claims_development_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   portfolio_exposure:
     sqlPath: ./portfolio_exposure.sql
     tableDetails:
       database: '{gold_schema}'
       comment: Policy exposure (sum insured and premium) by insurer and risk dimensions.
+    dataQualityExpectationsEnabled: true
+    dataQualityExpectationsPath: ./portfolio_exposure_dqe.yaml
+    quarantineMode: table
+    quarantineTargetDetails:
+      targetFormat: delta
+      database: '{gold_schema}'
   medallion_inventory:
     sqlPath: ./medallion_inventory.sql
     tableDetails:

@@ -282,14 +282,27 @@ A **materialized view (MV)** is a table whose contents are defined by a SQL quer
 
 ### Data quality expectations (DQE)
 
-**Expectations** are row-level rules the pipeline checks while writing bronze and silver. They live in YAML under each layer’s `expectations/` folder and attach to a dataflowspec via `dataQualityExpectationsEnabled` / `dataQualityExpectationsPath`.
+**Expectations** are row-level rules the pipeline checks while writing bronze, silver, and gold business marts. They live in YAML under each layer’s `expectations/` folder and attach via `dataQualityExpectationsEnabled` / `dataQualityExpectationsPath`.
 
 | Section | On failure |
 |---------|------------|
 | `expect_or_drop` | Row is **dropped** from the table |
 | `expect` | Row is **kept**; failure is tracked in DQ metrics |
 
-Tags group rules for ops (`Completeness`, `Validity`, `Consistency`). Bronze focuses on key / non-empty string hygiene; silver applies typed domain rules after casts. Gold marts and `claims_current` inherit quality from upstream silver (no separate DQE files).
+Tags group rules for ops (`Completeness`, `Validity`, `Consistency`). Bronze focuses on key / non-empty string hygiene; silver applies typed domain rules after casts; gold marts use light non-negative / completeness checks. `claims_current` and `medallion_inventory` have no separate DQE.
+
+### Quarantine tables
+
+Failed DQE rows are also written to separate quarantine tables via Lakeflow Framework `quarantineMode: table` (not the Python dual-stream pattern used in the streaming samples):
+
+```yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{bronze_schema}'   # or silver_schema / gold_schema
+```
+
+The framework names each sink `{target}_quarantine` (e.g. `claims_bordereau_quarantine`, `claims_snapshots_quarantine`, `event_loss_summary_quarantine`). Quarantine captures rows that fail **any** attached rule (`NOT` of all rules AND’d). Hard `expect_or_drop` failures are still dropped from the main table; soft `expect` failures stay in the main table and can also appear in quarantine.
 
 ### File schema vs target schema
 
@@ -401,11 +414,15 @@ Common knobs: `sourceType: delta`, `cdfEnabled: true`, `cdcSettings` with keys +
 
 ### Walkthrough: data quality expectations
 
-Each bronze and silver SCD1 dataflowspec wires a sibling YAML under `expectations/`:
+Each bronze and silver SCD1 dataflowspec (and each gold business mart MV) wires a sibling YAML under `expectations/` plus quarantine:
 
 ```yaml
 dataQualityExpectationsEnabled: true
 dataQualityExpectationsPath: ./claims_snapshots_dqe.yaml
+quarantineMode: table
+quarantineTargetDetails:
+  targetFormat: delta
+  database: '{silver_schema}'
 ```
 
 | Layer / table | Expectations file | Hard drops (`expect_or_drop`) | Soft metrics (`expect`) |
@@ -415,8 +432,9 @@ dataQualityExpectationsPath: ./claims_snapshots_dqe.yaml
 | Silver `policies` | [`policies_dqe.yaml`](src/dataflows/silver/expectations/policies_dqe.yaml) | `policy_id` | Positive amounts, term dates, band/building enums |
 | Silver `cyclone_events` | [`cyclone_events_dqe.yaml`](src/dataflows/silver/expectations/cyclone_events_dqe.yaml) | `event_id` | `start_date <= end_date`, dates present |
 | Silver `risk_zones` | [`risk_zones_dqe.yaml`](src/dataflows/silver/expectations/risk_zones_dqe.yaml) | `postcode` | Band present + allowed values |
+| Gold business marts | `gold/expectations/*_dqe.yaml` | Required dims / non-negative counts | Non-negative amounts |
 
-Soft rules intentionally flag known fixture edge cases (e.g. cyclone bad dates, risk-zone `HIGH` / empty postcode) in the Pipeline Event Log expectation charts without failing the update.
+Soft rules intentionally flag known fixture edge cases (e.g. cyclone bad dates, risk-zone `HIGH` / empty postcode) in the Pipeline Event Log expectation charts without failing the update. Quarantine tables for those flows are listed in `medallion_inventory` for the Pipeline Monitoring dashboard.
 
 ### Walkthrough: `claims_current.sql`
 
@@ -472,7 +490,9 @@ Open [`src/dataflows/gold/dataflowspec/gold_marts_main.yaml`](src/dataflows/gold
 | `claims_summary` | Frequency, severity, settlement by **peril / status / risk dims** | `claims_current` ⋈ `policies` |
 | `claims_development` | Reporting lag and reserve by **loss / reported month** | `claims_current` ⋈ `policies` |
 | `portfolio_exposure` | Sum insured and premium rate by underwriting dims | `policies` |
-| `medallion_inventory` | Row counts and ingest freshness across layers | bronze + silver + gold tables |
+| `medallion_inventory` | Row counts and ingest freshness across layers (includes `*_quarantine`) | bronze + silver + gold tables |
+
+Business marts also attach DQE + `quarantineMode: table` (see [`gold/expectations/`](src/dataflows/gold/expectations/)); `medallion_inventory` does not.
 
 **Why `{silver_schema}.claims_current` instead of `live.*`?** Gold runs as a separate pipeline from silver. Cross-pipeline reads use fully qualified names (tokens resolve to e.g. `actuarial.sample.claims_current`).
 
