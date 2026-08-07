@@ -4,7 +4,7 @@ Welcome. This guide walks you through an actuarial **bronze → silver → gold*
 
 **In plain English:** you describe each dataset in YAML (and a bit of SQL). A shared framework runtime turns those descriptions into Lakeflow Declarative Pipeline tables in Unity Catalog. You do **not** write per-table Python `@dp.table` code here—that style lives in the sibling project [`claims_pipeline_saurabh`](../claims_pipeline_saurabh/).
 
-Adding code to demonstrate the branching
+Note: This line exists only to demonstrate a Git branch/PR workflow.
 
 Sample CSVs live under `fixtures/sample-data/` (from [`sample-data`](../sample-data/)).
 
