@@ -69,11 +69,6 @@ jobs:
       - name: Setup Databricks CLI
         uses: databricks/setup-cli@v1.10.0
 
-      # Prod sample points at this path for framework.sourcePath.
-      - name: Deploy Lakeflow Framework
-        working-directory: lakeflow_framework
-        run: databricks bundle deploy --target dev
-
       # Includes pipelines, job, volume, and all Lakeview dashboards.
       - name: Deploy claims LFF sample
         working-directory: claims_pipeline_lakeflowframework_sample
