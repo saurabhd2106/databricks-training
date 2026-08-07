@@ -72,8 +72,8 @@ jobs:
       # Includes pipelines, job, volume, and all Lakeview dashboards.
       - name: Deploy claims LFF sample
         working-directory: claims_pipeline_lakeflowframework_sample
-        run: databricks bundle deploy --target prod
+        run: databricks bundle deploy --target dev
 
       - name: Run claims_pipeline_job
         working-directory: claims_pipeline_lakeflowframework_sample
-        run: databricks bundle run claims_pipeline_job --target prod
+        run: databricks bundle run claims_pipeline_job --target dev
